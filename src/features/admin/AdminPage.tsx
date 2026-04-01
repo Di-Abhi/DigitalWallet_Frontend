@@ -1,26 +1,70 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Users, Shield, AlertTriangle, TrendingUp, Search, Check, X, ChevronDown, RefreshCw, Plus } from 'lucide-react';
-import { adminApi, rewardsApi } from '../../core/api/services';
-import { StatCard, StatusBadge, LoadingPage, Modal, ConfirmDialog, EmptyState } from '../../shared/components/UI';
+import { useState, useEffect, useCallback, ChangeEvent } from 'react';
+import { Users, Shield, AlertTriangle, TrendingUp, Search, Check, X, RefreshCw, Plus } from 'lucide-react';
+import { adminApi } from '../../core/api/services';
+import { StatCard, StatusBadge, LoadingPage, Modal, EmptyState } from '../../shared/components/UI';
 import { toast } from '../../shared/components/Toast';
 import { useNotifications } from '../../store/NotificationContext';
 
-function fmt(n) { return Number(n || 0).toLocaleString(); }
+function fmt(n: number | undefined | null): string {
+  return Number(n || 0).toLocaleString();
+}
+
+interface AdminStats {
+  totalUsers?: number;
+  activeUsers?: number;
+  blockedUsers?: number;
+  kycPending?: number;
+  newUsersToday?: number;
+  newUsersThisWeek?: number;
+  kycApproved?: number;
+  kycRejected?: number;
+}
+
+interface AdminUser {
+  id: number;
+  name?: string;
+  email?: string;
+  role?: string;
+  status?: string;
+  kycStatus?: string;
+}
+
+interface KycItem {
+  id?: number;
+  kycId?: number;
+  userId?: number;
+  userName?: string;
+  userEmail?: string;
+  docType?: string;
+  docNumber?: string;
+}
+
+interface CatalogForm {
+  name: string;
+  description: string;
+  pointsRequired: string;
+  type: string;
+  stock: string;
+  cashbackAmount: string;
+}
+
+type TabId = 'dashboard' | 'users' | 'kyc' | 'catalog';
 
 export default function AdminPage() {
   const { addNotification } = useNotifications();
-  const [tab, setTab] = useState('dashboard');
-  const [stats, setStats] = useState(null);
-  const [users, setUsers] = useState([]);
-  const [kycQueue, setKycQueue] = useState([]);
+  const [tab, setTab] = useState<TabId>('dashboard');
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [kycQueue, setKycQueue] = useState<KycItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [confirmDialog, setConfirmDialog] = useState(null);
   const [addCatalogModal, setAddCatalogModal] = useState(false);
-  const [catalogForm, setCatalogForm] = useState({ name: '', description: '', pointsRequired: '', type: 'CASHBACK', stock: '', cashbackAmount: '' });
-  const [rejectModal, setRejectModal] = useState(null);
+  const [catalogForm, setCatalogForm] = useState<CatalogForm>({
+    name: '', description: '', pointsRequired: '', type: 'CASHBACK', stock: '', cashbackAmount: '',
+  });
+  const [rejectModal, setRejectModal] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState('');
 
   const loadDashboard = useCallback(async () => {
@@ -62,40 +106,40 @@ export default function AdminPage() {
     else if (tab === 'kyc') loadKyc();
   }, [tab, loadDashboard, loadUsers, loadKyc]);
 
-  const blockUser = async (userId, blocked) => {
+  const blockUser = async (userId: number, isBlocked: boolean) => {
     try {
-      if (blocked) await adminApi.unblockUser(userId);
+      if (isBlocked) await adminApi.unblockUser(userId);
       else await adminApi.blockUser(userId);
-      toast.success(`User ${blocked ? 'unblocked' : 'blocked'}`);
-      addNotification({ title: 'User Updated', message: `User #${userId} ${blocked ? 'unblocked' : 'blocked'}`, type: 'info' });
+      toast.success(`User ${isBlocked ? 'unblocked' : 'blocked'}`);
+      addNotification({ title: 'User Updated', message: `User #${userId} ${isBlocked ? 'unblocked' : 'blocked'}`, type: 'info' });
       loadUsers();
-    } catch (err) { toast.error(err.response?.data?.message || 'Action failed'); }
+    } catch (err: any) { toast.error(err.response?.data?.message || 'Action failed'); }
   };
 
-  const changeRole = async (userId, newRole) => {
+  const changeRole = async (userId: number, newRole: string) => {
     try {
       await adminApi.changeRole(userId, newRole);
       toast.success(`Role changed to ${newRole}`);
       loadUsers();
-    } catch (err) { toast.error(err.response?.data?.message || 'Action failed'); }
+    } catch (err: any) { toast.error(err.response?.data?.message || 'Action failed'); }
   };
 
-  const approveKyc = async (kycId) => {
+  const approveKyc = async (kycId: number) => {
     try {
       await adminApi.approveKycById(kycId);
       toast.success('KYC approved');
       addNotification({ title: 'KYC Approved', message: `KYC #${kycId} approved`, type: 'success' });
       loadKyc();
-    } catch (err) { toast.error(err.response?.data?.message || 'Approval failed'); }
+    } catch (err: any) { toast.error(err.response?.data?.message || 'Approval failed'); }
   };
 
-  const rejectKyc = async (kycId, reason) => {
+  const rejectKyc = async (kycId: number, reason: string) => {
     try {
       await adminApi.rejectKycById(kycId, reason);
       toast.success('KYC rejected');
       setRejectModal(null);
       loadKyc();
-    } catch (err) { toast.error(err.response?.data?.message || 'Rejection failed'); }
+    } catch (err: any) { toast.error(err.response?.data?.message || 'Rejection failed'); }
   };
 
   const addCatalogItem = async () => {
@@ -109,10 +153,16 @@ export default function AdminPage() {
       toast.success('Catalog item added!');
       setAddCatalogModal(false);
       setCatalogForm({ name: '', description: '', pointsRequired: '', type: 'CASHBACK', stock: '', cashbackAmount: '' });
-    } catch (err) { toast.error(err.response?.data?.message || 'Failed to add item'); }
+    } catch (err: any) { toast.error(err.response?.data?.message || 'Failed to add item'); }
   };
 
-  const TABS = [
+  const refreshCurrent = () => {
+    if (tab === 'dashboard') loadDashboard();
+    else if (tab === 'users') loadUsers();
+    else if (tab === 'kyc') loadKyc();
+  };
+
+  const TABS: { id: TabId; label: string }[] = [
     { id: 'dashboard', label: '📊 Dashboard' },
     { id: 'users', label: '👥 Users' },
     { id: 'kyc', label: '🪪 KYC Queue' },
@@ -123,14 +173,14 @@ export default function AdminPage() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2"><Shield className="w-6 h-6 text-cyan-500" /> Admin Panel</h1>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Shield className="w-6 h-6 text-cyan-500" /> Admin Panel
+          </h1>
           <p className="text-sm text-[var(--text-muted)] mt-0.5">Manage users, KYC, and rewards</p>
         </div>
-        <button className="btn-ghost p-2" onClick={() => {
-          if (tab === 'dashboard') loadDashboard();
-          else if (tab === 'users') loadUsers();
-          else if (tab === 'kyc') loadKyc();
-        }}><RefreshCw className="w-4 h-4" /></button>
+        <button className="btn-ghost p-2" onClick={refreshCurrent}>
+          <RefreshCw className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Tabs */}
@@ -175,6 +225,7 @@ export default function AdminPage() {
               <EmptyState icon={Users} title="No users found" />
             ) : (
               <>
+                {/* Desktop table */}
                 <div className="hidden md:block overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
@@ -201,8 +252,8 @@ export default function AdminPage() {
                             </div>
                           </td>
                           <td className="p-4">
-                            <select className="input-field py-1 text-xs w-28" value={u.role}
-                              onChange={(e) => changeRole(u.id, e.target.value)}>
+                            <select className="input-field py-1 text-xs w-28" value={u.role || 'USER'}
+                              onChange={(e: ChangeEvent<HTMLSelectElement>) => changeRole(u.id, e.target.value)}>
                               {['USER', 'ADMIN', 'MERCHANT'].map((r) => <option key={r} value={r}>{r}</option>)}
                             </select>
                           </td>
@@ -211,7 +262,11 @@ export default function AdminPage() {
                           <td className="p-4">
                             <div className="flex gap-2 justify-center">
                               <button
-                                className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-all ${u.status === 'BLOCKED' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 hover:bg-emerald-200' : 'bg-red-100 dark:bg-red-900/30 text-red-600 hover:bg-red-200'}`}
+                                className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-all ${
+                                  u.status === 'BLOCKED'
+                                    ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 hover:bg-emerald-200'
+                                    : 'bg-red-100 dark:bg-red-900/30 text-red-600 hover:bg-red-200'
+                                }`}
                                 onClick={() => blockUser(u.id, u.status === 'BLOCKED')}>
                                 {u.status === 'BLOCKED' ? 'Unblock' : 'Block'}
                               </button>
@@ -223,7 +278,7 @@ export default function AdminPage() {
                   </table>
                 </div>
 
-                {/* Mobile */}
+                {/* Mobile cards */}
                 <div className="md:hidden divide-y divide-[var(--border)]">
                   {users.map((u) => (
                     <div key={u.id} className="p-4 space-y-3">
@@ -231,12 +286,18 @@ export default function AdminPage() {
                         <div className="w-9 h-9 rounded-full bg-gradient-to-br from-cyan-400 to-cyan-600 text-white font-bold flex items-center justify-center">
                           {(u.name || 'U')[0].toUpperCase()}
                         </div>
-                        <div className="flex-1"><div className="font-semibold">{u.name}</div><div className="text-xs text-[var(--text-muted)]">{u.email}</div></div>
+                        <div className="flex-1">
+                          <div className="font-semibold">{u.name}</div>
+                          <div className="text-xs text-[var(--text-muted)]">{u.email}</div>
+                        </div>
                       </div>
                       <div className="flex flex-wrap gap-2 items-center">
                         <StatusBadge status={u.status || 'ACTIVE'} />
                         <StatusBadge status={u.kycStatus || 'NOT_SUBMITTED'} />
-                        <button className={`text-xs px-3 py-1 rounded-lg font-semibold ${u.status === 'BLOCKED' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}
+                        <button
+                          className={`text-xs px-3 py-1 rounded-lg font-semibold ${
+                            u.status === 'BLOCKED' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'
+                          }`}
                           onClick={() => blockUser(u.id, u.status === 'BLOCKED')}>
                           {u.status === 'BLOCKED' ? 'Unblock' : 'Block'}
                         </button>
@@ -247,9 +308,11 @@ export default function AdminPage() {
 
                 {totalPages > 1 && (
                   <div className="flex items-center justify-center gap-2 p-4 border-t border-[var(--border)]">
-                    <button className="btn-secondary px-3 py-1.5 text-sm" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>← Prev</button>
+                    <button className="btn-secondary px-3 py-1.5 text-sm" disabled={page === 0}
+                      onClick={() => setPage((p) => p - 1)}>← Prev</button>
                     <span className="text-sm text-[var(--text-muted)]">Page {page + 1} / {totalPages}</span>
-                    <button className="btn-secondary px-3 py-1.5 text-sm" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>Next →</button>
+                    <button className="btn-secondary px-3 py-1.5 text-sm" disabled={page >= totalPages - 1}
+                      onClick={() => setPage((p) => p + 1)}>Next →</button>
                   </div>
                 )}
               </>
@@ -264,28 +327,33 @@ export default function AdminPage() {
           <EmptyState icon={Shield} title="No pending KYC submissions" desc="All caught up!" />
         ) : (
           <div className="space-y-3">
-            {kycQueue.map((k) => (
-              <div key={k.kycId || k.id} className="card p-5 flex flex-wrap items-center gap-4">
-                <div className="flex-1 min-w-48">
-                  <div className="font-bold">{k.userName || `User #${k.userId}`}</div>
-                  <div className="text-sm text-[var(--text-muted)]">{k.userEmail}</div>
-                  <div className="mt-2 flex gap-3 text-xs text-[var(--text-muted)]">
-                    <span>Doc: <span className="font-semibold text-[var(--text)]">{k.docType}</span></span>
-                    <span>#{k.docNumber}</span>
+            {kycQueue.map((k) => {
+              const kycId = k.kycId ?? k.id ?? 0;
+              return (
+                <div key={kycId} className="card p-5 flex flex-wrap items-center gap-4">
+                  <div className="flex-1 min-w-48">
+                    <div className="font-bold">{k.userName || `User #${k.userId}`}</div>
+                    <div className="text-sm text-[var(--text-muted)]">{k.userEmail}</div>
+                    <div className="mt-2 flex gap-3 text-xs text-[var(--text-muted)]">
+                      <span>Doc: <span className="font-semibold text-[var(--text)]">{k.docType}</span></span>
+                      <span>#{k.docNumber}</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 hover:bg-emerald-200 transition-all"
+                      onClick={() => approveKyc(kycId)}>
+                      <Check className="w-4 h-4" /> Approve
+                    </button>
+                    <button
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-red-100 dark:bg-red-900/30 text-red-700 hover:bg-red-200 transition-all"
+                      onClick={() => setRejectModal(kycId)}>
+                      <X className="w-4 h-4" /> Reject
+                    </button>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <button className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 hover:bg-emerald-200 transition-all"
-                    onClick={() => approveKyc(k.kycId || k.id)}>
-                    <Check className="w-4 h-4" /> Approve
-                  </button>
-                  <button className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-red-100 dark:bg-red-900/30 text-red-700 hover:bg-red-200 transition-all"
-                    onClick={() => setRejectModal(k.kycId || k.id)}>
-                    <X className="w-4 h-4" /> Reject
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )
       )}
@@ -305,43 +373,58 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Reject KYC modal */}
+      {/* Reject KYC Modal */}
       <Modal open={!!rejectModal} onClose={() => setRejectModal(null)} title="Reject KYC" size="sm">
         <div className="space-y-4">
           <div>
             <label className="label">Rejection Reason</label>
-            <textarea className="input-field" rows={3} placeholder="State the reason…"
-              value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} />
+            <textarea
+              className="input-field resize-none"
+              rows={3}
+              placeholder="State the reason…"
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+            />
           </div>
           <div className="flex gap-3">
             <button className="btn-secondary flex-1" onClick={() => setRejectModal(null)}>Cancel</button>
-            <button className="btn-danger flex-1" onClick={() => rejectKyc(rejectModal, rejectReason)} disabled={!rejectReason}>Reject KYC</button>
+            <button
+              className="btn-danger flex-1"
+              onClick={() => rejectModal && rejectKyc(rejectModal, rejectReason)}
+              disabled={!rejectReason}>
+              Reject KYC
+            </button>
           </div>
         </div>
       </Modal>
 
-      {/* Add catalog modal */}
+      {/* Add Catalog Modal */}
       <Modal open={addCatalogModal} onClose={() => setAddCatalogModal(false)} title="Add Reward Item" size="lg">
         <div className="grid grid-cols-2 gap-4">
           {[
-            { label: 'Name', key: 'name', placeholder: 'e.g. 10% Cashback' },
-            { label: 'Type', key: 'type', type: 'select', options: ['CASHBACK', 'COUPON', 'VOUCHER'] },
-            { label: 'Points Required', key: 'pointsRequired', type: 'number', placeholder: '100' },
-            { label: 'Stock', key: 'stock', type: 'number', placeholder: '50' },
-            { label: 'Cashback Amount (₹)', key: 'cashbackAmount', type: 'number', placeholder: '0' },
-          ].map(({ label, key, type, placeholder, options }) => (
+            { label: 'Name', key: 'name' as keyof CatalogForm, placeholder: 'e.g. 10% Cashback' },
+            { label: 'Points Required', key: 'pointsRequired' as keyof CatalogForm, inputType: 'number', placeholder: '100' },
+            { label: 'Stock', key: 'stock' as keyof CatalogForm, inputType: 'number', placeholder: '50' },
+            { label: 'Cashback Amount (₹)', key: 'cashbackAmount' as keyof CatalogForm, inputType: 'number', placeholder: '0' },
+          ].map(({ label, key, inputType, placeholder }) => (
             <div key={key}>
               <label className="label">{label}</label>
-              {type === 'select' ? (
-                <select className="input-field" value={catalogForm[key]} onChange={(e) => setCatalogForm({ ...catalogForm, [key]: e.target.value })}>
-                  {options.map((o) => <option key={o} value={o}>{o}</option>)}
-                </select>
-              ) : (
-                <input type={type || 'text'} className="input-field" placeholder={placeholder}
-                  value={catalogForm[key]} onChange={(e) => setCatalogForm({ ...catalogForm, [key]: e.target.value })} />
-              )}
+              <input
+                type={inputType || 'text'}
+                className="input-field"
+                placeholder={placeholder}
+                value={catalogForm[key]}
+                onChange={(e) => setCatalogForm({ ...catalogForm, [key]: e.target.value })}
+              />
             </div>
           ))}
+          <div>
+            <label className="label">Type</label>
+            <select className="input-field" value={catalogForm.type}
+              onChange={(e) => setCatalogForm({ ...catalogForm, type: e.target.value })}>
+              {['CASHBACK', 'COUPON', 'VOUCHER'].map((o) => <option key={o} value={o}>{o}</option>)}
+            </select>
+          </div>
           <div className="col-span-2">
             <label className="label">Description</label>
             <input className="input-field" placeholder="Short description" value={catalogForm.description}

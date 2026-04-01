@@ -1,21 +1,51 @@
-import { useState } from 'react';
+import { useState, ChangeEvent, FormEvent } from 'react';
 import { Send, User, Info, CheckCircle } from 'lucide-react';
-import { walletApi } from '../../core/api/services';
+import { walletApi, userApi } from '../../core/api/services';
 import { toast } from '../../shared/components/Toast';
 import { useNotifications } from '../../store/NotificationContext';
 import { Spinner } from '../../shared/components/UI';
+import NoWalletBanner from '../../shared/components/NoWalletBanner';
 
-function fmt(a) { return `₹${Number(a || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`; }
+function fmt(a: number | string): string {
+  return `₹${Number(a || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+}
+
+type KycStatus = 'NOT_SUBMITTED' | 'PENDING' | 'REJECTED' | 'APPROVED' | null;
+
+function isWalletNotFound(err: unknown): boolean {
+  const e = err as any;
+  const status: number = e?.response?.status;
+  const msg: string = (e?.response?.data?.message || '').toLowerCase();
+  return (
+    status === 404 ||
+    msg.includes('wallet not found') ||
+    msg.includes('no wallet') ||
+    msg.includes('wallet not activated')
+  );
+}
+
+interface TransferForm {
+  receiverId: string;
+  amount: string;
+  description: string;
+}
+interface TransferSuccess {
+  amount: string;
+  receiverId: string;
+}
 
 export default function TransferPage() {
   const { addNotification } = useNotifications();
-  const [form, setForm] = useState({ receiverId: '', amount: '', description: '' });
+  const [form, setForm] = useState<TransferForm>({ receiverId: '', amount: '', description: '' });
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(null);
+  const [success, setSuccess] = useState<TransferSuccess | null>(null);
+  const [walletMissing, setWalletMissing] = useState(false);
+  const [kycStatus, setKycStatus] = useState<KycStatus>(null);
 
-  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) =>
+    setForm({ ...form, [e.target.name]: e.target.value });
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!form.receiverId || !form.amount) return toast.error('Fill in all required fields');
     if (Number(form.amount) < 1 || Number(form.amount) > 25000) return toast.error('Amount must be ₹1–₹25,000');
@@ -31,8 +61,14 @@ export default function TransferPage() {
       addNotification({ title: 'Transfer Successful', message: `₹${form.amount} sent to User #${form.receiverId}`, type: 'success' });
       toast.success(`Transfer of ${fmt(form.amount)} successful!`);
       setForm({ receiverId: '', amount: '', description: '' });
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Transfer failed');
+    } catch (err: any) {
+      if (isWalletNotFound(err)) {
+        const kycRes = await userApi.kycStatus().catch(() => null);
+        setKycStatus(kycRes?.data?.data?.status ?? null);
+        setWalletMissing(true);
+      } else {
+        toast.error(err.response?.data?.message || 'Transfer failed');
+      }
     } finally {
       setLoading(false);
     }
@@ -41,6 +77,11 @@ export default function TransferPage() {
   return (
     <div className="max-w-lg mx-auto space-y-6 animate-fade-in">
       <h1 className="text-2xl font-bold">Send / Transfer</h1>
+
+      {/* Wallet not activated guard */}
+      {walletMissing && (
+        <NoWalletBanner kycStatus={kycStatus} variant="inline" />
+      )}
 
       {success && (
         <div className="card p-5 border-emerald-500/50 bg-emerald-50 dark:bg-emerald-950/30">
@@ -82,7 +123,6 @@ export default function TransferPage() {
             className="input-field" value={form.description} onChange={handleChange} />
         </div>
 
-        {/* Preview */}
         {form.amount && Number(form.amount) > 0 && (
           <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
             <div className="flex justify-between text-sm mb-2">

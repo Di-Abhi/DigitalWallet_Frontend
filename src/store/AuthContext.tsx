@@ -1,19 +1,40 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 
-const AuthContext = createContext(null);
+interface User {
+  id: number;
+  fullName: string;
+  email: string;
+  phone?: string;
+  role: 'USER' | 'ADMIN';
+}
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
+interface Tokens {
+  accessToken: string;
+  refreshToken: string;
+}
+
+interface AuthContextType {
+  user: User | null;
+  login: (userData: User, tokens: Tokens) => void;
+  logout: () => void;
+  isAdmin: boolean;
+  isAuthenticated: boolean;
+}
+
+const AuthContext = createContext<AuthContextType | null>(null);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(() => {
     try {
       const u = sessionStorage.getItem('user');
       return u ? JSON.parse(u) : null;
     } catch { return null; }
   });
 
-  const login = useCallback((userData, tokens) => {
+  const login = useCallback((userData: User, tokens: Tokens) => {
     sessionStorage.setItem('accessToken', tokens.accessToken);
     sessionStorage.setItem('refreshToken', tokens.refreshToken);
-    sessionStorage.setItem('userId', userData.id);
+    sessionStorage.setItem('userId', String(userData.id));
     sessionStorage.setItem('userRole', userData.role);
     sessionStorage.setItem('userEmail', userData.email);
     sessionStorage.setItem('user', JSON.stringify(userData));
@@ -35,7 +56,7 @@ export function AuthProvider({ children }) {
   );
 }
 
-export const useAuth = () => {
+export const useAuth = (): AuthContextType => {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be inside AuthProvider');
   return ctx;

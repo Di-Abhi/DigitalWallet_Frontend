@@ -19,7 +19,12 @@
     --text: #f1f5f9;
     --text-muted: #94a3b8;
   }
-  body { @apply font-sans antialiased; background: var(--bg); color: var(--text); min-height: 100vh; }
+  body {
+    @apply font-sans antialiased;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
   ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-thumb { @apply bg-slate-300 dark:bg-slate-600 rounded-full; }
 }
@@ -39,4 +44,6 @@
   .badge-yellow { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400; }
   .badge-blue { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-cyan-100 dark:bg-cyan-900/40 text-cyan-700 dark:text-cyan-400; }
   .amount { @apply font-mono; }
+  .notif-dot { @apply absolute top-1 right-1 w-2 h-2 rounded-full bg-cyan-500 animate-ping; }
+  .notif-dot-static { @apply absolute top-1 right-1 w-2 h-2 rounded-full bg-cyan-500; }
 }

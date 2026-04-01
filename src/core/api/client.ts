@@ -1,8 +1,8 @@
-import axios from 'axios';
+import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 
 const BASE_URL = 'http://localhost:8080';
 
-export const api = axios.create({
+export const api: AxiosInstance = axios.create({
   baseURL: BASE_URL,
   timeout: 15000,
   headers: { 'Content-Type': 'application/json' },
@@ -10,7 +10,7 @@ export const api = axios.create({
 
 // Request interceptor — attach token
 api.interceptors.request.use(
-  (config) => {
+  (config: InternalAxiosRequestConfig) => {
     const token = sessionStorage.getItem('accessToken');
     if (token) config.headers.Authorization = `Bearer ${token}`;
     const userId = sessionStorage.getItem('userId');
@@ -26,10 +26,10 @@ api.interceptors.request.use(
 
 // Response interceptor — refresh token on 401
 let isRefreshing = false;
-let failedQueue = [];
+let failedQueue: Array<{ resolve: (token: string) => void; reject: (err: unknown) => void }> = [];
 
-const processQueue = (error, token = null) => {
-  failedQueue.forEach((prom) => (error ? prom.reject(error) : prom.resolve(token)));
+const processQueue = (error: unknown, token: string | null = null) => {
+  failedQueue.forEach((prom) => (error ? prom.reject(error) : prom.resolve(token!)));
   failedQueue = [];
 };
 
@@ -56,7 +56,7 @@ api.interceptors.response.use(
       }
       try {
         const { data } = await axios.post(`${BASE_URL}/api/auth/refresh`, { refreshToken });
-        const newToken = data.accessToken;
+        const newToken: string = data.accessToken;
         sessionStorage.setItem('accessToken', newToken);
         processQueue(null, newToken);
         originalRequest.headers.Authorization = `Bearer ${newToken}`;

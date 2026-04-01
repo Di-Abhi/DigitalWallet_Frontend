@@ -5,28 +5,55 @@ import { Modal, StatusBadge, LoadingPage, EmptyState } from '../../shared/compon
 import { toast } from '../../shared/components/Toast';
 import { useNotifications } from '../../store/NotificationContext';
 
-function fmt(a) { return `₹${Number(a || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`; }
+function fmt(a: number | string): string {
+  return `₹${Number(a || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+}
 
-const TIER_INFO = {
+const TIER_INFO: Record<string, { color: string; label: string; min: number }> = {
   BRONZE: { color: 'from-orange-400 to-orange-600', label: 'Bronze', min: 0 },
   SILVER: { color: 'from-slate-400 to-slate-600', label: 'Silver', min: 500 },
   GOLD: { color: 'from-yellow-400 to-yellow-600', label: 'Gold', min: 2000 },
   PLATINUM: { color: 'from-cyan-400 to-cyan-600', label: 'Platinum', min: 5000 },
 };
 
-const TYPE_ICONS = { CASHBACK: Zap, COUPON: ShoppingBag, VOUCHER: Gift };
+const TYPE_ICONS: Record<string, React.ElementType> = { CASHBACK: Zap, COUPON: ShoppingBag, VOUCHER: Gift };
+
+interface RewardSummary {
+  tier: string;
+  points: number;
+  nextTier?: string;
+  pointsToNextTier?: number;
+}
+interface CatalogItem {
+  id: number;
+  name: string;
+  description?: string;
+  type: string;
+  pointsRequired: number;
+  cashbackAmount?: number;
+  tierRequired?: string;
+  stock?: number;
+  active: boolean;
+}
+interface HistoryItem {
+  id: number;
+  type: string;
+  points: number;
+  description?: string;
+  createdAt?: string;
+}
 
 export default function RewardsPage() {
   const { addNotification } = useNotifications();
-  const [summary, setSummary] = useState(null);
-  const [catalog, setCatalog] = useState([]);
-  const [history, setHistory] = useState([]);
+  const [summary, setSummary] = useState<RewardSummary | null>(null);
+  const [catalog, setCatalog] = useState<CatalogItem[]>([]);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [redeemModal, setRedeemModal] = useState(null);
+  const [redeemModal, setRedeemModal] = useState<CatalogItem | null>(null);
   const [redeemPtsModal, setRedeemPtsModal] = useState(false);
   const [ptsToRedeem, setPtsToRedeem] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
-  const [tab, setTab] = useState('catalog'); // catalog | history
+  const [tab, setTab] = useState<'catalog' | 'history'>('catalog');
 
   const load = async () => {
     try {
@@ -44,7 +71,7 @@ export default function RewardsPage() {
 
   useEffect(() => { load(); }, []);
 
-  const handleRedeem = async (item) => {
+  const handleRedeem = async (item: CatalogItem) => {
     setActionLoading(true);
     try {
       const res = await rewardsApi.redeem({ rewardId: item.id });
@@ -53,7 +80,7 @@ export default function RewardsPage() {
       addNotification({ title: 'Reward Redeemed!', message: `${item.name} redeemed successfully`, type: 'success' });
       setRedeemModal(null);
       load();
-    } catch (err) {
+    } catch (err: any) {
       toast.error(err.response?.data?.message || 'Redemption failed');
     } finally { setActionLoading(false); }
   };
@@ -69,7 +96,7 @@ export default function RewardsPage() {
       setRedeemPtsModal(false);
       setPtsToRedeem('');
       load();
-    } catch (err) {
+    } catch (err: any) {
       toast.error(err.response?.data?.message || 'Redemption failed');
     } finally { setActionLoading(false); }
   };
@@ -80,7 +107,7 @@ export default function RewardsPage() {
   const tierInfo = TIER_INFO[tier] || TIER_INFO.BRONZE;
   const progress = summary?.nextTier
     ? Math.min(100, Math.round(((summary.points - (TIER_INFO[tier]?.min || 0)) /
-        (summary.pointsToNextTier + summary.points - (TIER_INFO[tier]?.min || 0))) * 100))
+        ((summary.pointsToNextTier ?? 0) + summary.points - (TIER_INFO[tier]?.min || 0))) * 100))
     : 100;
 
   return (
@@ -124,7 +151,7 @@ export default function RewardsPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl w-fit">
-        {['catalog', 'history'].map((t) => (
+        {(['catalog', 'history'] as const).map((t) => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-4 py-2 rounded-lg text-sm font-semibold capitalize transition-all ${tab === t ? 'bg-white dark:bg-slate-700 shadow-sm' : 'text-[var(--text-muted)]'}`}>
             {t === 'catalog' ? '🎁 Catalog' : '📜 History'}
@@ -153,14 +180,14 @@ export default function RewardsPage() {
                     <div className="font-bold">{item.name}</div>
                     <div className="text-xs text-[var(--text-muted)] mt-1">{item.description}</div>
                   </div>
-                  {item.cashbackAmount > 0 && (
-                    <div className="text-emerald-500 font-semibold text-sm">Cashback: {fmt(item.cashbackAmount)}</div>
+                  {(item.cashbackAmount ?? 0) > 0 && (
+                    <div className="text-emerald-500 font-semibold text-sm">Cashback: {fmt(item.cashbackAmount ?? 0)}</div>
                   )}
                   <div className="flex items-center justify-between mt-auto">
                     <div>
                       <div className="font-bold text-cyan-500 amount">{item.pointsRequired} pts</div>
                       {item.tierRequired && <div className="text-xs text-[var(--text-muted)]">Req: {item.tierRequired}</div>}
-                      {item.stock > 0 && <div className="text-xs text-[var(--text-muted)]">{item.stock} left</div>}
+                      {(item.stock ?? 0) > 0 && <div className="text-xs text-[var(--text-muted)]">{item.stock} left</div>}
                     </div>
                     <button
                       className={canAfford && item.active ? 'btn-primary px-4 py-2 text-sm' : 'btn-secondary px-4 py-2 text-sm opacity-60 cursor-not-allowed'}
@@ -185,7 +212,9 @@ export default function RewardsPage() {
             {history.map((tx) => (
               <div key={tx.id} className="flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold shrink-0 ${
-                  tx.type === 'EARN' || tx.type === 'BONUS' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600' : 'bg-red-100 dark:bg-red-900/30 text-red-500'
+                  tx.type === 'EARN' || tx.type === 'BONUS'
+                    ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600'
+                    : 'bg-red-100 dark:bg-red-900/30 text-red-500'
                 }`}>
                   {tx.type === 'EARN' || tx.type === 'BONUS' ? '+' : '−'}
                 </div>
@@ -230,7 +259,7 @@ export default function RewardsPage() {
             <label className="label">Points to redeem</label>
             <input type="number" min="1" max={summary?.points} className="input-field text-xl font-mono"
               placeholder="0" value={ptsToRedeem} onChange={(e) => setPtsToRedeem(e.target.value)} />
-            <p className="text-xs text-[var(--text-muted)] mt-1">= {fmt(ptsToRedeem || 0)} wallet credit</p>
+            <p className="text-xs text-[var(--text-muted)] mt-1">= {fmt(ptsToRedeem || '0')} wallet credit</p>
           </div>
           <button className="btn-primary w-full" onClick={handleRedeemPoints} disabled={actionLoading}>
             {actionLoading ? 'Processing...' : `Redeem ${ptsToRedeem || 0} pts`}

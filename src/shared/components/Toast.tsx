@@ -1,12 +1,20 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, ReactNode } from 'react';
 import { CheckCircle, XCircle, Info, AlertTriangle, X } from 'lucide-react';
 
-let toastFn = null;
+interface ToastItem {
+  id: number;
+  type: 'success' | 'error' | 'info' | 'warning';
+  message: string;
+  title?: string;
+  duration?: number;
+}
+
+let toastFn: ((toast: Omit<ToastItem, 'id'>) => void) | null = null;
 
 export function ToastProvider() {
-  const [toasts, setToasts] = useState([]);
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
 
-  const add = useCallback((toast) => {
+  const add = useCallback((toast: Omit<ToastItem, 'id'>) => {
     const id = Date.now();
     setToasts((prev) => [...prev, { id, ...toast }]);
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), toast.duration || 4000);
@@ -14,14 +22,14 @@ export function ToastProvider() {
 
   useEffect(() => { toastFn = add; return () => { toastFn = null; }; }, [add]);
 
-  const icons = { success: CheckCircle, error: XCircle, info: Info, warning: AlertTriangle };
-  const styles = {
+  const icons: Record<string, React.ElementType> = { success: CheckCircle, error: XCircle, info: Info, warning: AlertTriangle };
+  const styles: Record<string, string> = {
     success: 'border-l-4 border-emerald-500 bg-white dark:bg-slate-800',
     error: 'border-l-4 border-red-500 bg-white dark:bg-slate-800',
     info: 'border-l-4 border-cyan-500 bg-white dark:bg-slate-800',
     warning: 'border-l-4 border-yellow-500 bg-white dark:bg-slate-800',
   };
-  const iconColors = { success: 'text-emerald-500', error: 'text-red-500', info: 'text-cyan-500', warning: 'text-yellow-500' };
+  const iconColors: Record<string, string> = { success: 'text-emerald-500', error: 'text-red-500', info: 'text-cyan-500', warning: 'text-yellow-500' };
 
   return (
     <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-2 w-80">
@@ -45,8 +53,8 @@ export function ToastProvider() {
 }
 
 export const toast = {
-  success: (message, title) => toastFn?.({ type: 'success', message, title }),
-  error: (message, title) => toastFn?.({ type: 'error', message, title }),
-  info: (message, title) => toastFn?.({ type: 'info', message, title }),
-  warning: (message, title) => toastFn?.({ type: 'warning', message, title }),
+  success: (message: string, title?: string) => toastFn?.({ type: 'success', message, title }),
+  error: (message: string, title?: string) => toastFn?.({ type: 'error', message, title }),
+  info: (message: string, title?: string) => toastFn?.({ type: 'info', message, title }),
+  warning: (message: string, title?: string) => toastFn?.({ type: 'warning', message, title }),
 };

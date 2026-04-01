@@ -1,8 +1,12 @@
-import { Component } from 'react';
+import { Component, ReactNode, ElementType } from 'react';
 import { AlertTriangle } from 'lucide-react';
 
 // ─── Spinner ─────────────────────────────────────────────────────────────────
-export function Spinner({ size = 'md', className = '' }) {
+interface SpinnerProps {
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
+}
+export function Spinner({ size = 'md', className = '' }: SpinnerProps) {
   const sizes = { sm: 'w-4 h-4', md: 'w-6 h-6', lg: 'w-10 h-10' };
   return (
     <div className={`${sizes[size]} border-2 border-current border-t-transparent rounded-full animate-spin ${className}`} />
@@ -19,9 +23,15 @@ export function LoadingPage() {
 }
 
 // ─── Error Boundary ──────────────────────────────────────────────────────────
-export class ErrorBoundary extends Component {
-  state = { hasError: false, error: null };
-  static getDerivedStateFromError(error) { return { hasError: true, error }; }
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+export class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryState> {
+  state: ErrorBoundaryState = { hasError: false, error: null };
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
   render() {
     if (this.state.hasError) {
       return (
@@ -31,7 +41,7 @@ export class ErrorBoundary extends Component {
             <p className="font-semibold text-lg">Something went wrong</p>
             <p className="text-[var(--text-muted)] text-sm mt-1">{this.state.error?.message}</p>
           </div>
-          <button className="btn-primary" onClick={() => this.setState({ hasError: false })}>Try again</button>
+          <button className="btn-primary" onClick={() => this.setState({ hasError: false, error: null })}>Try again</button>
         </div>
       );
     }
@@ -40,7 +50,13 @@ export class ErrorBoundary extends Component {
 }
 
 // ─── Empty State ─────────────────────────────────────────────────────────────
-export function EmptyState({ icon: Icon, title, desc, action }) {
+interface EmptyStateProps {
+  icon?: ElementType;
+  title: string;
+  desc?: string;
+  action?: ReactNode;
+}
+export function EmptyState({ icon: Icon, title, desc, action }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
       {Icon && <Icon className="w-12 h-12 text-[var(--text-muted)]" strokeWidth={1} />}
@@ -54,7 +70,14 @@ export function EmptyState({ icon: Icon, title, desc, action }) {
 }
 
 // ─── Modal ───────────────────────────────────────────────────────────────────
-export function Modal({ open, onClose, title, children, size = 'md' }) {
+interface ModalProps {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  children: ReactNode;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+}
+export function Modal({ open, onClose, title, children, size = 'md' }: ModalProps) {
   if (!open) return null;
   const sizes = { sm: 'max-w-sm', md: 'max-w-md', lg: 'max-w-lg', xl: 'max-w-2xl' };
   return (
@@ -74,8 +97,8 @@ export function Modal({ open, onClose, title, children, size = 'md' }) {
 }
 
 // ─── Status Badge ─────────────────────────────────────────────────────────────
-export function StatusBadge({ status }) {
-  const map = {
+export function StatusBadge({ status }: { status: string }) {
+  const map: Record<string, string> = {
     SUCCESS: 'badge-green', COMPLETED: 'badge-green', APPROVED: 'badge-green', ACTIVE: 'badge-green',
     FAILED: 'badge-red', REJECTED: 'badge-red', BLOCKED: 'badge-red',
     PENDING: 'badge-yellow',
@@ -87,7 +110,16 @@ export function StatusBadge({ status }) {
 }
 
 // ─── Confirm Dialog ───────────────────────────────────────────────────────────
-export function ConfirmDialog({ open, onClose, onConfirm, title, message, confirmText = 'Confirm', danger = false }) {
+interface ConfirmDialogProps {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  message: string;
+  confirmText?: string;
+  danger?: boolean;
+}
+export function ConfirmDialog({ open, onClose, onConfirm, title, message, confirmText = 'Confirm', danger = false }: ConfirmDialogProps) {
   return (
     <Modal open={open} onClose={onClose} title={title} size="sm">
       <p className="text-[var(--text-muted)] text-sm mb-6">{message}</p>
@@ -100,8 +132,16 @@ export function ConfirmDialog({ open, onClose, onConfirm, title, message, confir
 }
 
 // ─── Stat Card ────────────────────────────────────────────────────────────────
-export function StatCard({ icon: Icon, label, value, sub, color = 'cyan', trend }) {
-  const colors = {
+interface StatCardProps {
+  icon: ElementType;
+  label: string;
+  value: string | number;
+  sub?: string;
+  color?: 'cyan' | 'green' | 'red' | 'yellow' | 'purple';
+  trend?: number;
+}
+export function StatCard({ icon: Icon, label, value, sub, color = 'cyan', trend }: StatCardProps) {
+  const colors: Record<string, string> = {
     cyan: 'text-cyan-500 bg-cyan-50 dark:bg-cyan-950/40',
     green: 'text-emerald-500 bg-emerald-50 dark:bg-emerald-950/40',
     red: 'text-red-500 bg-red-50 dark:bg-red-950/40',

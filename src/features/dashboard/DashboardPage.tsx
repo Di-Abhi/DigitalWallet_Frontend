@@ -1,32 +1,78 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Wallet, Send, Plus, Gift, ArrowUpRight, ArrowDownLeft, TrendingUp, Clock } from 'lucide-react';
-import { walletApi, rewardsApi } from '../../core/api/services';
+import { walletApi, rewardsApi, userApi } from '../../core/api/services';
 import { StatCard, StatusBadge, LoadingPage } from '../../shared/components/UI';
 import { toast } from '../../shared/components/Toast';
 import { useAuth } from '../../store/AuthContext';
-import { useNotifications } from '../../store/NotificationContext';
+import NoWalletBanner from '../../shared/components/NoWalletBanner';
 
-function formatAmount(a) { return `₹${Number(a || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` }
-function formatDate(d) { return d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'; }
+function formatAmount(a: number | undefined | null): string {
+  return `₹${Number(a || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+}
+function formatDate(d: string | undefined | null): string {
+  return d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+}
+
+/** Returns true when an API error means the wallet doesn't exist yet */
+function isWalletNotFound(err: unknown): boolean {
+  const e = err as any;
+  const status: number = e?.response?.status;
+  const msg: string = (e?.response?.data?.message || '').toLowerCase();
+  return (
+    status === 404 ||
+    msg.includes('wallet not found') ||
+    msg.includes('wallet does not exist') ||
+    msg.includes('no wallet') ||
+    msg.includes('wallet not activated') ||
+    msg.includes('wallet inactive')
+  );
+}
+
+interface Balance { balance: number; status: string; }
+interface Transaction {
+  id: number; type: string; amount: number; status: string;
+  description?: string; referenceId?: string; createdAt?: string;
+}
+interface Rewards {
+  points: number; tier: string; nextTier?: string; pointsToNextTier?: number;
+}
+type KycStatus = 'NOT_SUBMITTED' | 'PENDING' | 'REJECTED' | 'APPROVED' | null;
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const { addNotification } = useNotifications();
-  const [balance, setBalance] = useState(null);
-  const [recentTx, setRecentTx] = useState([]);
-  const [rewards, setRewards] = useState(null);
+  const [balance, setBalance] = useState<Balance | null>(null);
+  const [recentTx, setRecentTx] = useState<Transaction[]>([]);
+  const [rewards, setRewards] = useState<Rewards | null>(null);
   const [loading, setLoading] = useState(true);
+  const [walletMissing, setWalletMissing] = useState(false);
+  const [kycStatus, setKycStatus] = useState<KycStatus>(null);
 
   useEffect(() => {
-    const fetch = async () => {
+    const fetchData = async () => {
       try {
+        // Fetch KYC status first — needed for banner context regardless
+        const kycRes = await userApi.kycStatus().catch(() => null);
+        if (kycRes) setKycStatus(kycRes.data?.data?.status ?? null);
+
         const [bRes, txRes, rRes] = await Promise.allSettled([
           walletApi.balance(),
           walletApi.transactions(0, 5),
           rewardsApi.summary(),
         ]);
-        if (bRes.status === 'fulfilled') setBalance(bRes.value.data.data);
+
+        // If balance call failed, check if it's a "wallet not found" case
+        if (bRes.status === 'rejected') {
+          if (isWalletNotFound(bRes.reason)) {
+            setWalletMissing(true);
+            setLoading(false);
+            return;
+          }
+          toast.error('Failed to load wallet balance');
+        } else {
+          setBalance(bRes.value.data.data);
+        }
+
         if (txRes.status === 'fulfilled') setRecentTx(txRes.value.data.content || []);
         if (rRes.status === 'fulfilled') setRewards(rRes.value.data.data);
       } catch {
@@ -35,18 +81,40 @@ export default function DashboardPage() {
         setLoading(false);
       }
     };
-    fetch();
+    fetchData();
   }, []);
 
   if (loading) return <LoadingPage />;
 
-  const tierColors = { SILVER: 'text-slate-400', GOLD: 'text-yellow-400', PLATINUM: 'text-cyan-400', BRONZE: 'text-orange-400' };
+  // ── No wallet yet: show KYC guidance ─────────────────────────────────────
+  if (walletMissing) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div>
+          <h1 className="text-2xl font-bold">
+            Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'},{' '}
+            {user?.fullName?.split(' ')[0]} 👋
+          </h1>
+          <p className="text-[var(--text-muted)] text-sm mt-1">Let's get your wallet set up.</p>
+        </div>
+        <NoWalletBanner kycStatus={kycStatus} variant="page" />
+      </div>
+    );
+  }
+
+  // ── Normal dashboard ──────────────────────────────────────────────────────
+  const tierColors: Record<string, string> = {
+    SILVER: 'text-slate-400', GOLD: 'text-yellow-400',
+    PLATINUM: 'text-cyan-400', BRONZE: 'text-orange-400',
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Greeting */}
       <div>
-        <h1 className="text-2xl font-bold">Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}, {user?.fullName?.split(' ')[0]} 👋</h1>
+        <h1 className="text-2xl font-bold">
+          Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'},{' '}
+          {user?.fullName?.split(' ')[0]} 👋
+        </h1>
         <p className="text-[var(--text-muted)] text-sm mt-1">Here's what's happening with your wallet today.</p>
       </div>
 
@@ -61,7 +129,6 @@ export default function DashboardPage() {
           </div>
           <div className="amount text-4xl font-bold mb-1">{formatAmount(balance?.balance)}</div>
           <div className="text-sm opacity-70 mb-6">Status: {balance?.status || 'Active'}</div>
-
           <div className="flex gap-3 flex-wrap">
             <Link to="/wallet" className="flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm px-4 py-2 rounded-xl text-sm font-semibold transition-all">
               <Plus className="w-4 h-4" /> Add Money
@@ -76,16 +143,16 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Stats row */}
+      {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard icon={Gift} label="Reward Points" value={rewards?.points?.toLocaleString() || '0'} color="cyan"
-          sub={<span className={`font-semibold ${tierColors[rewards?.tier] || 'text-slate-400'}`}>{rewards?.tier || 'BRONZE'} Tier</span>} />
+          sub={<span className={`font-semibold ${tierColors[rewards?.tier ?? ''] || 'text-slate-400'}`}>{rewards?.tier || 'BRONZE'} Tier</span> as unknown as string} />
         <StatCard icon={TrendingUp} label="Points to Next Tier" value={rewards?.pointsToNextTier?.toLocaleString() || '0'} color="purple"
           sub={rewards?.nextTier ? `→ ${rewards.nextTier}` : 'Max tier!'} />
         <StatCard icon={ArrowDownLeft} label="Recent Credits" color="green"
-          value={formatAmount(recentTx.filter(t => t.type === 'TOPUP' || t.type === 'CASHBACK').reduce((s, t) => s + t.amount, 0))} />
+          value={formatAmount(recentTx.filter(t => ['TOPUP','CASHBACK'].includes(t.type)).reduce((s, t) => s + t.amount, 0))} />
         <StatCard icon={ArrowUpRight} label="Recent Debits" color="red"
-          value={formatAmount(recentTx.filter(t => t.type === 'TRANSFER' || t.type === 'WITHDRAW').reduce((s, t) => s + t.amount, 0))} />
+          value={formatAmount(recentTx.filter(t => ['TRANSFER','WITHDRAW'].includes(t.type)).reduce((s, t) => s + t.amount, 0))} />
       </div>
 
       {/* Recent transactions */}
@@ -96,7 +163,6 @@ export default function DashboardPage() {
             View all <ArrowUpRight className="w-3 h-3" />
           </Link>
         </div>
-
         {recentTx.length === 0 ? (
           <div className="py-10 text-center text-[var(--text-muted)] text-sm">
             <Clock className="w-10 h-10 mx-auto mb-3 opacity-30" />

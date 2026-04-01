@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Wallet, Send, Gift, Receipt, User,
-  HelpCircle, Sun, Moon, Bell, LogOut, Menu, X, Shield, ChevronRight
+  Sun, Moon, Bell, LogOut, Menu, Shield, ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../store/AuthContext';
 import { useTheme } from '../store/ThemeContext';
@@ -10,7 +10,13 @@ import { useNotifications } from '../store/NotificationContext';
 import { authApi } from '../core/api/services';
 import { toast } from '../shared/components/Toast';
 
-const userNav = [
+interface NavItem {
+  to: string;
+  icon: React.ElementType;
+  label: string;
+}
+
+const userNav: NavItem[] = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/wallet', icon: Wallet, label: 'Wallet' },
   { to: '/transfer', icon: Send, label: 'Send / Transfer' },
@@ -19,21 +25,23 @@ const userNav = [
   { to: '/profile', icon: User, label: 'Profile / KYC' },
 ];
 
-const adminNav = [
+const adminNav: NavItem[] = [
   { to: '/admin', icon: Shield, label: 'Admin Panel' },
 ];
 
-export default function AppLayout({ children }) {
+export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, logout, isAdmin } = useAuth();
   const { isDark, toggle } = useTheme();
   const { notifications, markRead, markAllRead, unreadCount } = useNotifications();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const notifRef = useRef();
+  const notifRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handler = (e) => { if (notifRef.current && !notifRef.current.contains(e.target)) setNotifOpen(false); };
+    const handler = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false);
+    };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
@@ -55,7 +63,7 @@ export default function AppLayout({ children }) {
       {/* Logo */}
       <div className="p-6 border-b border-[var(--border)]">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center shadow-sm">
             <Wallet className="w-5 h-5 text-white" />
           </div>
           <div>
@@ -76,6 +84,7 @@ export default function AppLayout({ children }) {
           >
             <Icon className="w-4 h-4 shrink-0" />
             <span>{label}</span>
+            <ChevronRight className="w-3.5 h-3.5 ml-auto opacity-0 group-hover:opacity-100" />
           </NavLink>
         ))}
       </nav>
@@ -146,7 +155,9 @@ export default function AppLayout({ children }) {
             {notifOpen && (
               <div className="absolute right-0 top-12 w-80 card shadow-2xl z-50 animate-fade-in overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
-                  <span className="font-semibold text-sm">Notifications {unreadCount > 0 && <span className="badge-red ml-1.5">{unreadCount}</span>}</span>
+                  <span className="font-semibold text-sm">
+                    Notifications {unreadCount > 0 && <span className="badge-red ml-1.5">{unreadCount}</span>}
+                  </span>
                   <button className="text-xs text-cyan-500 hover:underline" onClick={markAllRead}>Mark all read</button>
                 </div>
                 <div className="max-h-80 overflow-y-auto">

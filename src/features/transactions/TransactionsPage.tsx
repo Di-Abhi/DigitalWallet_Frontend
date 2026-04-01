@@ -1,18 +1,35 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Receipt, Filter, Download, Search, ArrowUpRight, ArrowDownLeft, Flag } from 'lucide-react';
+import { Receipt, Download, Search, ArrowUpRight, ArrowDownLeft, Flag } from 'lucide-react';
 import { walletApi } from '../../core/api/services';
 import { StatusBadge, LoadingPage, EmptyState } from '../../shared/components/UI';
 import { toast } from '../../shared/components/Toast';
 
-function fmt(a) { return `₹${Number(a || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`; }
-function fmtDate(d) { return d ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'; }
+function fmt(a: number): string {
+  return `₹${Number(a || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+}
+function fmtDate(d?: string | null): string {
+  return d ? new Date(d).toLocaleString('en-IN', {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  }) : '—';
+}
 
 const CREDIT_TYPES = ['TOPUP', 'CASHBACK'];
 const TX_TYPES = ['TOPUP', 'TRANSFER', 'WITHDRAW', 'CASHBACK', 'REDEEM'];
 const TX_STATUSES = ['PENDING', 'SUCCESS', 'FAILED', 'REVERSED'];
 
+interface Transaction {
+  id: number;
+  type: string;
+  amount: number;
+  status: string;
+  description?: string;
+  referenceId?: string;
+  createdAt?: string;
+}
+
 export default function TransactionsPage() {
-  const [txns, setTxns] = useState([]);
+  const [txns, setTxns] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -25,7 +42,7 @@ export default function TransactionsPage() {
     setLoading(true);
     try {
       const res = await walletApi.transactions(page, 10);
-      let data = res.data.content || [];
+      let data: Transaction[] = res.data.content || [];
       if (typeFilter) data = data.filter((t) => t.type === typeFilter);
       if (statusFilter) data = data.filter((t) => t.status === statusFilter);
       if (search) data = data.filter((t) =>
@@ -70,16 +87,19 @@ export default function TransactionsPage() {
           <input className="input-field pl-9" placeholder="Search by ref ID or description…"
             value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} />
         </div>
-        <select className="input-field w-auto" value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setPage(0); }}>
+        <select className="input-field w-auto" value={typeFilter}
+          onChange={(e) => { setTypeFilter(e.target.value); setPage(0); }}>
           <option value="">All Types</option>
           {TX_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
         </select>
-        <select className="input-field w-auto" value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}>
+        <select className="input-field w-auto" value={statusFilter}
+          onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}>
           <option value="">All Statuses</option>
           {TX_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
         {(typeFilter || statusFilter || search) && (
-          <button className="btn-ghost text-sm" onClick={() => { setTypeFilter(''); setStatusFilter(''); setSearch(''); setPage(0); }}>
+          <button className="btn-ghost text-sm"
+            onClick={() => { setTypeFilter(''); setStatusFilter(''); setSearch(''); setPage(0); }}>
             Clear filters
           </button>
         )}
@@ -112,13 +132,19 @@ export default function TransactionsPage() {
                       <td className="p-4">
                         <div className="flex items-center gap-3">
                           <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-                            CREDIT_TYPES.includes(tx.type) ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600' : 'bg-red-100 dark:bg-red-900/30 text-red-500'
+                            CREDIT_TYPES.includes(tx.type)
+                              ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600'
+                              : 'bg-red-100 dark:bg-red-900/30 text-red-500'
                           }`}>
-                            {CREDIT_TYPES.includes(tx.type) ? <ArrowDownLeft className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
+                            {CREDIT_TYPES.includes(tx.type)
+                              ? <ArrowDownLeft className="w-4 h-4" />
+                              : <ArrowUpRight className="w-4 h-4" />}
                           </div>
                           <div>
                             <div className="font-semibold">#{tx.id}</div>
-                            <div className="text-xs text-[var(--text-muted)] truncate max-w-32">{tx.description || tx.referenceId || '—'}</div>
+                            <div className="text-xs text-[var(--text-muted)] truncate max-w-32">
+                              {tx.description || tx.referenceId || '—'}
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -148,9 +174,13 @@ export default function TransactionsPage() {
                 <div key={tx.id} className="p-4">
                   <div className="flex items-center gap-3 mb-2">
                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                      CREDIT_TYPES.includes(tx.type) ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600' : 'bg-red-100 dark:bg-red-900/30 text-red-500'
+                      CREDIT_TYPES.includes(tx.type)
+                        ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600'
+                        : 'bg-red-100 dark:bg-red-900/30 text-red-500'
                     }`}>
-                      {CREDIT_TYPES.includes(tx.type) ? <ArrowDownLeft className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
+                      {CREDIT_TYPES.includes(tx.type)
+                        ? <ArrowDownLeft className="w-4 h-4" />
+                        : <ArrowUpRight className="w-4 h-4" />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-sm">#{tx.id} • {tx.type}</div>
@@ -171,9 +201,11 @@ export default function TransactionsPage() {
             {/* Pagination */}
             {totalPages > 1 && (
               <div className="flex items-center justify-center gap-2 p-4 border-t border-[var(--border)]">
-                <button className="btn-secondary px-3 py-1.5 text-sm" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>← Prev</button>
+                <button className="btn-secondary px-3 py-1.5 text-sm" disabled={page === 0}
+                  onClick={() => setPage((p) => p - 1)}>← Prev</button>
                 <span className="text-sm text-[var(--text-muted)]">Page {page + 1} / {totalPages}</span>
-                <button className="btn-secondary px-3 py-1.5 text-sm" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>Next →</button>
+                <button className="btn-secondary px-3 py-1.5 text-sm" disabled={page >= totalPages - 1}
+                  onClick={() => setPage((p) => p + 1)}>Next →</button>
               </div>
             )}
           </>
