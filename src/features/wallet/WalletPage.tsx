@@ -44,10 +44,27 @@ function fmtDate(d?: string | null): string {
 
 function loadRazorpayScript(): Promise<boolean> {
   return new Promise((resolve) => {
+    // Already loaded — done
     if (window.Razorpay) return resolve(true);
+
+    // Script tag already injected by a concurrent call — wait for it
+    const existing = document.querySelector<HTMLScriptElement>(
+      'script[src="https://checkout.razorpay.com/v1/checkout.js"]'
+    );
+    if (existing) {
+      existing.addEventListener('load', () => resolve(true));
+      existing.addEventListener('error', () => resolve(false));
+      return;
+    }
+
     const script = document.createElement('script');
     script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.onload = () => resolve(true);
+    // async=true prevents parser-blocking and suppresses the browser's
+    // "preloaded but not used" warning for Razorpay's internal sub-chunks
+    script.async = true;
+    // crossOrigin lets the browser handle Razorpay's CORS CDN chunks cleanly
+    script.crossOrigin = 'anonymous';
+    script.onload  = () => resolve(true);
     script.onerror = () => resolve(false);
     document.body.appendChild(script);
   });
@@ -168,7 +185,7 @@ export default function WalletPage() {
       return;
     }
 
-    if (!order?.id) {
+    if (!order?.orderId) {
       toast.error('Invalid order received from server. Please try again.');
       setPayStatusSafe('idle');
       return;
@@ -182,7 +199,7 @@ export default function WalletPage() {
       currency: order.currency || 'INR',
       name: 'PayVault',
       description: 'Wallet Top-up',
-      order_id: order.id,
+      order_id: order.orderId,
       handler: async function (response: any) {
         setPayStatusSafe('verifying');
         await verifyPayment(response);
@@ -214,9 +231,9 @@ export default function WalletPage() {
 
   const verifyPayment = async (rzpResponse: any) => {
     const payload = {
-      razorpay_payment_id: rzpResponse.razorpay_payment_id,
-      razorpay_order_id: rzpResponse.razorpay_order_id,
-      razorpay_signature: rzpResponse.razorpay_signature,
+      razorpayPaymentId: rzpResponse.razorpay_payment_id,
+      razorpayOrderId: rzpResponse.razorpay_order_id,
+      razorpaySignature: rzpResponse.razorpay_signature,
     };
     try {
       await walletApi.verifyPayment(payload);
