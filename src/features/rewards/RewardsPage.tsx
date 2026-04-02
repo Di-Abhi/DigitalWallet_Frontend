@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Gift, Star, Zap, Award, ShoppingBag, RefreshCw } from 'lucide-react';
+import { Gift, Star, Zap, Award, ShoppingBag, RefreshCw, History } from 'lucide-react';
 import { rewardsApi } from '../../core/api/services';
 import { Modal, StatusBadge, LoadingPage, EmptyState } from '../../shared/components/UI';
 import { toast } from '../../shared/components/Toast';
@@ -107,7 +107,7 @@ export default function RewardsPage() {
   const tierInfo = TIER_INFO[tier] || TIER_INFO.BRONZE;
   const progress = summary?.nextTier
     ? Math.min(100, Math.round(((summary.points - (TIER_INFO[tier]?.min || 0)) /
-        ((summary.pointsToNextTier ?? 0) + summary.points - (TIER_INFO[tier]?.min || 0))) * 100))
+      ((summary.pointsToNextTier ?? 0) + summary.points - (TIER_INFO[tier]?.min || 0))) * 100))
     : 100;
 
   return (
@@ -152,9 +152,25 @@ export default function RewardsPage() {
       {/* Tabs */}
       <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl w-fit">
         {(['catalog', 'history'] as const).map((t) => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold capitalize transition-all ${tab === t ? 'bg-white dark:bg-slate-700 shadow-sm' : 'text-[var(--text-muted)]'}`}>
-            {t === 'catalog' ? '🎁 Catalog' : '📜 History'}
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium capitalize transition-all ${tab === t
+                ? 'bg-white dark:bg-slate-700'
+                : 'text-[var(--text-muted)]'
+              }`}
+          >
+            {t === 'catalog' ? (
+              <>
+                <Gift className="w-4 h-4" />
+                Catalog
+              </>
+            ) : (
+              <>
+                <History className="w-4 h-4" />
+                History
+              </>
+            )}
           </button>
         ))}
       </div>
@@ -211,11 +227,10 @@ export default function RewardsPage() {
           <div className="card p-6 space-y-3">
             {history.map((tx) => (
               <div key={tx.id} className="flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold shrink-0 ${
-                  tx.type === 'EARN' || tx.type === 'BONUS'
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold shrink-0 ${tx.type === 'EARN' || tx.type === 'BONUS'
                     ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600'
                     : 'bg-red-100 dark:bg-red-900/30 text-red-500'
-                }`}>
+                  }`}>
                   {tx.type === 'EARN' || tx.type === 'BONUS' ? '+' : '−'}
                 </div>
                 <div className="flex-1 min-w-0">

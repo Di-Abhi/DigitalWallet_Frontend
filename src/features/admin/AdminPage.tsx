@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, ChangeEvent, useMemo } from 'react';
-import { Users, Shield, AlertTriangle, TrendingUp, Search, Check, X, RefreshCw, Plus } from 'lucide-react';
+import { Users, Shield, AlertTriangle, TrendingUp, Search, Check, X, RefreshCw, Plus, UsersIcon, LayoutDashboardIcon, User, File, Gift, LucideIcon } from 'lucide-react';
 import { adminApi } from '../../core/api/services';
 import { StatCard, StatusBadge, LoadingPage, Modal, EmptyState } from '../../shared/components/UI';
 import { toast } from '../../shared/components/Toast';
@@ -72,7 +72,7 @@ export default function AdminPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   // ── Debounce search to avoid API call on every keystroke ─────────────────
-  const debouncedSearch = useDebounce(search, 400);
+  const debouncedSearch = useDebounce(search, 500);
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
@@ -175,11 +175,11 @@ export default function AdminPage() {
     else if (tab === 'kyc') loadKyc();
   };
 
-  const TABS: { id: TabId; label: string }[] = [
-    { id: 'dashboard', label: '📊 Dashboard' },
-    { id: 'users', label: '👥 Users' },
-    { id: 'kyc', label: '🪪 KYC Queue' },
-    { id: 'catalog', label: '🎁 Catalog' },
+  const TABS: { id: TabId; icon: LucideIcon, label: string }[] = [
+    { id: 'dashboard', icon: LayoutDashboardIcon, label: 'Dashboard' },
+    { id: 'users', icon: User, label: 'Users' },
+    { id: 'kyc', icon: File, label: 'KYC Queue' },
+    { id: 'catalog', icon: Gift, label: 'Catalog' },
   ];
 
   return (
@@ -197,14 +197,20 @@ export default function AdminPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl w-fit flex-wrap" role="tablist">
-        {TABS.map((t) => (
-          <button key={t.id} role="tab" aria-selected={tab === t.id}
-            onClick={() => { setTab(t.id); setPage(0); setSearch(''); }}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${tab === t.id ? 'bg-white dark:bg-slate-700 shadow-sm' : 'text-[var(--text-muted)]'}`}>
-            {t.label}
-          </button>
-        ))}
+      <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl w-fit">
+        {TABS.map((t) => {
+          const Icon = t.icon;
+          return (
+            <button key={t.id} role="tab" aria-selected={tab === t.id}
+              onClick={() => { setTab(t.id); setPage(0); setSearch(''); }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === t.id
+                  ? 'bg-white dark:bg-slate-700'
+                  : 'text-slate-500'
+                }`}>
+              <Icon className="w-4 h-4" />{t.label}
+            </button>
+          )
+        })}
       </div>
 
       {/* Dashboard Tab */}
@@ -285,8 +291,8 @@ export default function AdminPage() {
                               <button
                                 aria-label={`${u.status === 'BLOCKED' ? 'Unblock' : 'Block'} ${u.name}`}
                                 className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-all ${u.status === 'BLOCKED'
-                                    ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 hover:bg-emerald-200'
-                                    : 'bg-red-100 dark:bg-red-900/30 text-red-600 hover:bg-red-200'
+                                  ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 hover:bg-emerald-200'
+                                  : 'bg-red-100 dark:bg-red-900/30 text-red-600 hover:bg-red-200'
                                   }`}
                                 onClick={() => blockUser(u.id, u.status === 'BLOCKED')}>
                                 {u.status === 'BLOCKED' ? 'Unblock' : 'Block'}

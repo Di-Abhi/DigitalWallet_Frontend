@@ -6,6 +6,7 @@ import { toast } from '../../shared/components/Toast';
 import { useNotifications } from '../../store/NotificationContext';
 import { Spinner } from '../../shared/components/UI';
 import NoWalletBanner from '../../shared/components/NoWalletBanner';
+import { ScratchCardModal } from '../../shared/components/ScratchCard';
 
 function fmt(a: number | string): string {
   return `₹${Number(a || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
@@ -32,6 +33,10 @@ export default function TransferPage() {
   const [walletMissing, setWalletMissing] = useState(false);
   const [kycStatus, setKycStatus] = useState<KycStatus>(null);
 
+  // ── Scratch card state ─────────────────────────────────────────────────
+  const [scratchModal, setScratchModal] = useState(false);
+  const [scratchAmount, setScratchAmount] = useState(0);
+
   const handleChange = (e: ChangeEvent<HTMLInputElement>) =>
     setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -51,6 +56,9 @@ export default function TransferPage() {
       addNotification({ title: 'Transfer Successful', message: `₹${form.amount} sent to User #${form.receiverId}`, type: 'success' });
       toast.success(`Transfer of ${fmt(form.amount)} successful!`);
       setForm({ receiverId: '', amount: '', description: '' });
+      // Show scratch card after successful transfer
+      setScratchAmount(Number(form.amount));
+      setTimeout(() => setScratchModal(true), 600);
     } catch (err) {
       if (isWalletNotFound(err)) {
         const kycRes = await userApi.kycStatus().catch(() => null);
@@ -144,6 +152,18 @@ export default function TransferPage() {
           <li>• Both sender and receiver are notified</li>
         </ul>
       </div>
+
+      {/* 🎁 Scratch Card Modal — shown after successful transfer */}
+      <ScratchCardModal
+        open={scratchModal}
+        onClose={() => setScratchModal(false)}
+        triggerType="transfer"
+        amount={scratchAmount}
+        onPointsEarned={(pts) => {
+          toast.success(`+${pts} bonus points added to your rewards!`, 'Scratch Reward');
+          addNotification({ title: '🎁 Scratch Card Reward', message: `You earned ${pts} bonus points!`, type: 'success' });
+        }}
+      />
     </div>
   );
 }

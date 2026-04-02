@@ -12,7 +12,7 @@ export const useAppSelector = <T>(selector: (state: RootState) => T): T =>
  * Returns a debounced version of value that only updates after `delay` ms of inactivity.
  * Use for search fields to prevent firing an API call on every keystroke.
  */
-export function useDebounce<T>(value: T, delay = 400): T {
+export function useDebounce<T>(value: T, delay = 500): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedValue(value), delay);

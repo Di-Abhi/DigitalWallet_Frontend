@@ -1,12 +1,13 @@
 import { isWalletNotFound, getApiErrorMessage } from '../../core/api/types';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Wallet, Plus, ArrowDownLeft, Download, RefreshCw, CheckCircle, XCircle, Loader } from 'lucide-react';
+import { Wallet, Plus, ArrowDownLeft, Download, RefreshCw, CheckCircle, XCircle, Loader, Trophy } from 'lucide-react';
 import { walletApi, userApi } from '../../core/api/services';
 import { Modal, StatusBadge, LoadingPage, EmptyState } from '../../shared/components/UI';
 import { toast } from '../../shared/components/Toast';
 import { useNotifications } from '../../store/NotificationContext';
 import { useAuth } from '../../store/AuthContext';
 import NoWalletBanner from '../../shared/components/NoWalletBanner';
+import { ScratchCardModal } from '../../shared/components/ScratchCard';
 
 
 type KycStatus = 'NOT_SUBMITTED' | 'PENDING' | 'REJECTED' | 'APPROVED' | null;
@@ -101,6 +102,10 @@ export default function WalletPage() {
   const [withdrawModal, setWithdrawModal] = useState(false);
   const [withdrawAmt, setWithdrawAmt] = useState('');
   const [withdrawLoading, setWithdrawLoading] = useState(false);
+
+  // ── Scratch card state ───────────────────────────────────────────────────
+  const [scratchModal, setScratchModal] = useState(false);
+  const [scratchAmount, setScratchAmount] = useState(0);
 
   const [stmtFrom, setStmtFrom] = useState('');
   const [stmtTo, setStmtTo] = useState('');
@@ -227,7 +232,10 @@ export default function WalletPage() {
       setLastPayment({ paymentId: rzpResponse.razorpay_payment_id, orderId: rzpResponse.razorpay_order_id });
       setPayStatusSafe('success');
       toast.success(`${fmt(amount)} added to your wallet!`, 'Top-up Successful');
-      addNotification({ title: 'Wallet Topped Up 🎉', message: `${fmt(amount)} credited via Razorpay`, type: 'success' });
+      addNotification({ title: `Wallet Topped Up ${<Trophy/>}`, message: `${fmt(amount)} credited via Razorpay`, type: 'success' });
+      //Show scratch card after successful recharge
+      setScratchAmount(Number(amount));
+      setTimeout(() => { setScratchModal(true); }, 900);
       setTimeout(loadData, 800);
     } catch (err:any) {
       const msg = err.response?.data?.message || 'Verification failed — contact support with your Payment ID';
@@ -546,6 +554,18 @@ export default function WalletPage() {
           </button>
         </div>
       </Modal>
+
+      {/* 🎁 Scratch Card Modal — shown after successful recharge */}
+      <ScratchCardModal
+        open={scratchModal}
+        onClose={() => setScratchModal(false)}
+        triggerType="recharge"
+        amount={scratchAmount}
+        onPointsEarned={(pts) => {
+          toast.success(`+${pts} bonus points added to your rewards!`, 'Scratch Reward');
+          addNotification({ title: '🎁 Scratch Card Reward', message: `You earned ${pts} bonus points!`, type: 'success' });
+        }}
+      />
     </div>
   );
 }

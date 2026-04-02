@@ -119,7 +119,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="absolute inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
-          <aside className="absolute left-0 top-0 bottom-0 w-60 bg-[var(--bg-card)] border-r border-[var(--border)] z-50 animate-slide-in">
+          <aside className="absolute left-0 top-0 bottom-0 w-60 bg-[var(--bg-card)] border-r border-[var(--border)] z-50 animate-slide-out">
             <SidebarContent />
           </aside>
         </div>
