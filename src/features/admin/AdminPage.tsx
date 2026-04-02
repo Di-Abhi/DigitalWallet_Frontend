@@ -37,6 +37,7 @@ interface KycItem {
   userEmail?: string;
   docType?: string;
   docNumber?: string;
+  docFilePath?: string;
 }
 
 interface CatalogForm {
@@ -66,6 +67,7 @@ export default function AdminPage() {
   });
   const [rejectModal, setRejectModal] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
@@ -95,7 +97,7 @@ export default function AdminPage() {
     setLoading(true);
     try {
       const res = await adminApi.pendingKyc();
-      setKycQueue(res.data?.content || res.data || []);
+      setKycQueue(res.data.data.content);
     } catch { toast.error('Failed to load KYC queue'); }
     finally { setLoading(false); }
   }, []);
@@ -262,11 +264,10 @@ export default function AdminPage() {
                           <td className="p-4">
                             <div className="flex gap-2 justify-center">
                               <button
-                                className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-all ${
-                                  u.status === 'BLOCKED'
+                                className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-all ${u.status === 'BLOCKED'
                                     ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 hover:bg-emerald-200'
                                     : 'bg-red-100 dark:bg-red-900/30 text-red-600 hover:bg-red-200'
-                                }`}
+                                  }`}
                                 onClick={() => blockUser(u.id, u.status === 'BLOCKED')}>
                                 {u.status === 'BLOCKED' ? 'Unblock' : 'Block'}
                               </button>
@@ -295,9 +296,8 @@ export default function AdminPage() {
                         <StatusBadge status={u.status || 'ACTIVE'} />
                         <StatusBadge status={u.kycStatus || 'NOT_SUBMITTED'} />
                         <button
-                          className={`text-xs px-3 py-1 rounded-lg font-semibold ${
-                            u.status === 'BLOCKED' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'
-                          }`}
+                          className={`text-xs px-3 py-1 rounded-lg font-semibold ${u.status === 'BLOCKED' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'
+                            }`}
                           onClick={() => blockUser(u.id, u.status === 'BLOCKED')}>
                           {u.status === 'BLOCKED' ? 'Unblock' : 'Block'}
                         </button>
@@ -340,6 +340,14 @@ export default function AdminPage() {
                     </div>
                   </div>
                   <div className="flex gap-2">
+                    {k.docFilePath && (
+                      <button
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-blue-100 dark:bg-blue-900/30 text-blue-700 hover:bg-blue-200 transition-all"
+                        onClick={() => setPreviewUrl(k.docFilePath!)}
+                      >
+                         View
+                      </button>
+                    )}
                     <button
                       className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 hover:bg-emerald-200 transition-all"
                       onClick={() => approveKyc(kycId)}>
@@ -372,6 +380,44 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+      
+      <Modal open={!!previewUrl} onClose={() => setPreviewUrl(null)} title="KYC Document" size="lg">
+  <div className="w-full h-[500px] flex items-center justify-center bg-slate-100 dark:bg-slate-800 rounded-xl overflow-hidden">
+
+    {previewUrl?.endsWith('.pdf') ? (
+      <iframe
+        src={previewUrl}
+        className="w-full h-full"
+      />
+    ) : (
+      <img
+        src={previewUrl}
+        alt="KYC Document"
+        className="max-h-full object-contain"
+      />
+    )}
+
+  </div>
+
+  {/* Actions */}
+  <div className="flex gap-3 mt-4">
+    <button
+      className="btn-secondary flex-1"
+      onClick={() => setPreviewUrl(null)}
+    >
+      Close
+    </button>
+
+    <a
+      href={previewUrl || ''}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="btn-primary flex-1 text-center"
+    >
+      Open Full
+    </a>
+  </div>
+</Modal>
 
       {/* Reject KYC Modal */}
       <Modal open={!!rejectModal} onClose={() => setRejectModal(null)} title="Reject KYC" size="sm">

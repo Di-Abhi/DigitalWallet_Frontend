@@ -46,7 +46,7 @@ export default function ProfilePage() {
           setForm({ name: pRes.value.data.data.name || '', phone: pRes.value.data.data.phone || '' });
         }
         if (kRes.status === 'fulfilled') setKyc(kRes.value.data.data);
-      } catch {}
+      } catch { }
       finally { setLoading(false); }
     };
     load();
@@ -70,6 +70,8 @@ export default function ProfilePage() {
     try {
       const fd = new FormData();
       fd.append('docFile', kycFile);
+      fd.append('docType', kycForm.docType);
+      fd.append('docNumber', kycForm.docNumber);
       const res = await userApi.kycSubmit(fd);
       setKyc(res.data.data);
       addNotification({ title: 'KYC Submitted', message: 'Your KYC documents are under review', type: 'info' });
