@@ -1,3 +1,4 @@
+import { isWalletNotFound, getApiErrorMessage } from '../../core/api/types';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Wallet, Plus, ArrowDownLeft, Download, RefreshCw, CheckCircle, XCircle, Loader } from 'lucide-react';
 import { walletApi, userApi } from '../../core/api/services';
@@ -7,20 +8,6 @@ import { useNotifications } from '../../store/NotificationContext';
 import { useAuth } from '../../store/AuthContext';
 import NoWalletBanner from '../../shared/components/NoWalletBanner';
 
-/** Returns true when an API error means the wallet doesn't exist yet */
-function isWalletNotFound(err: unknown): boolean {
-  const e = err as any;
-  const status: number = e?.response?.status;
-  const msg: string = (e?.response?.data?.message || '').toLowerCase();
-  return (
-    status === 404 ||
-    msg.includes('wallet not found') ||
-    msg.includes('wallet does not exist') ||
-    msg.includes('no wallet') ||
-    msg.includes('wallet not activated') ||
-    msg.includes('wallet inactive')
-  );
-}
 
 type KycStatus = 'NOT_SUBMITTED' | 'PENDING' | 'REJECTED' | 'APPROVED' | null;
 
@@ -179,7 +166,7 @@ export default function WalletPage() {
     try {
       const res = await walletApi.createOrder(rupees);
       order = res.data;
-    } catch (err: any) {
+    } catch (err:any) {
       toast.error(err.response?.data?.message || 'Failed to create payment order');
       setPayStatusSafe('idle');
       return;
@@ -242,7 +229,7 @@ export default function WalletPage() {
       toast.success(`${fmt(amount)} added to your wallet!`, 'Top-up Successful');
       addNotification({ title: 'Wallet Topped Up 🎉', message: `${fmt(amount)} credited via Razorpay`, type: 'success' });
       setTimeout(loadData, 800);
-    } catch (err: any) {
+    } catch (err:any) {
       const msg = err.response?.data?.message || 'Verification failed — contact support with your Payment ID';
       setFailMsg(msg);
       setPayStatusSafe('failed');
@@ -260,7 +247,7 @@ export default function WalletPage() {
       setWithdrawModal(false);
       setWithdrawAmt('');
       loadData();
-    } catch (err: any) {
+    } catch (err:any) {
       toast.error(err.response?.data?.message || 'Withdrawal failed');
     } finally {
       setWithdrawLoading(false);

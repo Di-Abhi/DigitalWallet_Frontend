@@ -1,3 +1,4 @@
+import { isWalletNotFound } from '../../core/api/types';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Wallet, Send, Plus, Gift, ArrowUpRight, ArrowDownLeft, TrendingUp, Clock } from 'lucide-react';
@@ -14,20 +15,6 @@ function formatDate(d: string | undefined | null): string {
   return d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 }
 
-/** Returns true when an API error means the wallet doesn't exist yet */
-function isWalletNotFound(err: unknown): boolean {
-  const e = err as any;
-  const status: number = e?.response?.status;
-  const msg: string = (e?.response?.data?.message || '').toLowerCase();
-  return (
-    status === 404 ||
-    msg.includes('wallet not found') ||
-    msg.includes('wallet does not exist') ||
-    msg.includes('no wallet') ||
-    msg.includes('wallet not activated') ||
-    msg.includes('wallet inactive')
-  );
-}
 
 interface Balance { balance: number; status: string; }
 interface Transaction {

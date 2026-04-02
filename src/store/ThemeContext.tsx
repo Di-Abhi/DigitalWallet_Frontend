@@ -1,36 +1,28 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+/**
+ * ThemeContext — thin compatibility shim over Redux Toolkit themeSlice.
+ * All components continue using `useTheme()` without any changes.
+ */
+import { useCallback, useEffect } from 'react';
+import { useAppDispatch, useAppSelector } from './hooks';
+import { toggleTheme, setTheme } from './slices/themeSlice';
 
-interface ThemeContextType {
-  theme: string;
-  toggle: () => void;
-  isDark: boolean;
-}
+export function useTheme() {
+  const dispatch = useAppDispatch();
+  const theme = useAppSelector((s) => s.theme.theme);
 
-const ThemeContext = createContext<ThemeContextType | null>(null);
-
-export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState(() => {
-    const saved = localStorage.getItem('theme');
-    if (saved) return saved;
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  });
-
+  // Sync DOM on mount and theme changes
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  const toggle = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
+  const toggle = useCallback(() => { dispatch(toggleTheme()); }, [dispatch]);
+  const set = useCallback((t: 'light' | 'dark') => { dispatch(setTheme(t)); }, [dispatch]);
 
-  return (
-    <ThemeContext.Provider value={{ theme, toggle, isDark: theme === 'dark' }}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  return { theme, toggle, set, isDark: theme === 'dark' };
 }
 
-export const useTheme = (): ThemeContextType => {
-  const ctx = useContext(ThemeContext);
-  if (!ctx) throw new Error('useTheme must be inside ThemeProvider');
-  return ctx;
-};
+// Legacy provider — now a no-op passthrough
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  return <>{children}</>;
+}

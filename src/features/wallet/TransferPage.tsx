@@ -1,3 +1,4 @@
+import { getApiErrorMessage, isWalletNotFound } from '../../core/api/types';
 import { useState, ChangeEvent, FormEvent } from 'react';
 import { Send, User, Info, CheckCircle } from 'lucide-react';
 import { walletApi, userApi } from '../../core/api/services';
@@ -12,17 +13,6 @@ function fmt(a: number | string): string {
 
 type KycStatus = 'NOT_SUBMITTED' | 'PENDING' | 'REJECTED' | 'APPROVED' | null;
 
-function isWalletNotFound(err: unknown): boolean {
-  const e = err as any;
-  const status: number = e?.response?.status;
-  const msg: string = (e?.response?.data?.message || '').toLowerCase();
-  return (
-    status === 404 ||
-    msg.includes('wallet not found') ||
-    msg.includes('no wallet') ||
-    msg.includes('wallet not activated')
-  );
-}
 
 interface TransferForm {
   receiverId: string;
@@ -61,13 +51,13 @@ export default function TransferPage() {
       addNotification({ title: 'Transfer Successful', message: `₹${form.amount} sent to User #${form.receiverId}`, type: 'success' });
       toast.success(`Transfer of ${fmt(form.amount)} successful!`);
       setForm({ receiverId: '', amount: '', description: '' });
-    } catch (err: any) {
+    } catch (err) {
       if (isWalletNotFound(err)) {
         const kycRes = await userApi.kycStatus().catch(() => null);
         setKycStatus(kycRes?.data?.data?.status ?? null);
         setWalletMissing(true);
       } else {
-        toast.error(err.response?.data?.message || 'Transfer failed');
+        toast.error(getApiErrorMessage(err, 'Transfer failed'));
       }
     } finally {
       setLoading(false);

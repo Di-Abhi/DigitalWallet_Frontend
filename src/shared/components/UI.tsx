@@ -1,4 +1,4 @@
-import { Component, ReactNode, ElementType } from 'react';
+import { Component, ReactNode, ElementType, memo } from 'react';
 import { AlertTriangle } from 'lucide-react';
 
 // ─── Spinner ─────────────────────────────────────────────────────────────────
@@ -9,14 +9,18 @@ interface SpinnerProps {
 export function Spinner({ size = 'md', className = '' }: SpinnerProps) {
   const sizes = { sm: 'w-4 h-4', md: 'w-6 h-6', lg: 'w-10 h-10' };
   return (
-    <div className={`${sizes[size]} border-2 border-current border-t-transparent rounded-full animate-spin ${className}`} />
+    <div
+      role="status"
+      aria-label="Loading"
+      className={`${sizes[size]} border-2 border-current border-t-transparent rounded-full animate-spin ${className}`}
+    />
   );
 }
 
 // ─── LoadingPage ─────────────────────────────────────────────────────────────
 export function LoadingPage() {
   return (
-    <div className="flex items-center justify-center h-64">
+    <div className="flex items-center justify-center h-64" role="status" aria-label="Loading page">
       <Spinner size="lg" className="text-cyan-500" />
     </div>
   );
@@ -35,13 +39,22 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBound
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex flex-col items-center justify-center h-64 gap-4 text-center">
-          <AlertTriangle className="w-12 h-12 text-red-500" />
+        <div
+          role="alert"
+          className="flex flex-col items-center justify-center h-64 gap-4 text-center"
+        >
+          <AlertTriangle className="w-12 h-12 text-red-500" aria-hidden="true" />
           <div>
             <p className="font-semibold text-lg">Something went wrong</p>
             <p className="text-[var(--text-muted)] text-sm mt-1">{this.state.error?.message}</p>
           </div>
-          <button className="btn-primary" onClick={() => this.setState({ hasError: false, error: null })}>Try again</button>
+          <button
+            className="btn-primary"
+            onClick={() => this.setState({ hasError: false, error: null })}
+            aria-label="Retry"
+          >
+            Try again
+          </button>
         </div>
       );
     }
@@ -58,8 +71,12 @@ interface EmptyStateProps {
 }
 export function EmptyState({ icon: Icon, title, desc, action }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
-      {Icon && <Icon className="w-12 h-12 text-[var(--text-muted)]" strokeWidth={1} />}
+    <div
+      className="flex flex-col items-center justify-center py-16 gap-4 text-center"
+      role="status"
+      aria-label={title}
+    >
+      {Icon && <Icon className="w-12 h-12 text-[var(--text-muted)]" strokeWidth={1} aria-hidden="true" />}
       <div>
         <p className="font-semibold">{title}</p>
         {desc && <p className="text-[var(--text-muted)] text-sm mt-1">{desc}</p>}
@@ -81,13 +98,24 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
   if (!open) return null;
   const sizes = { sm: 'max-w-sm', md: 'max-w-md', lg: 'max-w-lg', xl: 'max-w-2xl' };
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+    >
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
       <div className={`relative card shadow-2xl w-full ${sizes[size]} animate-fade-in`}>
         <div className="flex items-center justify-between p-6 border-b border-[var(--border)]">
-          <h3 className="font-bold text-lg">{title}</h3>
-          <button className="btn-ghost p-1.5 rounded-lg" onClick={onClose}>
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          <h3 id="modal-title" className="font-bold text-lg">{title}</h3>
+          <button
+            className="btn-ghost p-1.5 rounded-lg"
+            onClick={onClose}
+            aria-label="Close modal"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
         </div>
         <div className="p-6">{children}</div>
@@ -97,7 +125,7 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
 }
 
 // ─── Status Badge ─────────────────────────────────────────────────────────────
-export function StatusBadge({ status }: { status: string }) {
+export const StatusBadge = memo(function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
     SUCCESS: 'badge-green', COMPLETED: 'badge-green', APPROVED: 'badge-green', ACTIVE: 'badge-green',
     FAILED: 'badge-red', REJECTED: 'badge-red', BLOCKED: 'badge-red',
@@ -106,8 +134,12 @@ export function StatusBadge({ status }: { status: string }) {
     TOPUP: 'badge-blue', TRANSFER: 'badge-blue', WITHDRAW: 'badge-red',
     CASHBACK: 'badge-green', REDEEM: 'badge-blue',
   };
-  return <span className={map[status] || 'badge-blue'}>{status}</span>;
-}
+  return (
+    <span className={map[status] || 'badge-blue'} role="status" aria-label={`Status: ${status}`}>
+      {status}
+    </span>
+  );
+});
 
 // ─── Confirm Dialog ───────────────────────────────────────────────────────────
 interface ConfirmDialogProps {
@@ -125,7 +157,13 @@ export function ConfirmDialog({ open, onClose, onConfirm, title, message, confir
       <p className="text-[var(--text-muted)] text-sm mb-6">{message}</p>
       <div className="flex gap-3 justify-end">
         <button className="btn-secondary" onClick={onClose}>Cancel</button>
-        <button className={danger ? 'btn-danger' : 'btn-primary'} onClick={() => { onConfirm(); onClose(); }}>{confirmText}</button>
+        <button
+          className={danger ? 'btn-danger' : 'btn-primary'}
+          onClick={() => { onConfirm(); onClose(); }}
+          aria-label={confirmText}
+        >
+          {confirmText}
+        </button>
       </div>
     </Modal>
   );
@@ -140,7 +178,7 @@ interface StatCardProps {
   color?: 'cyan' | 'green' | 'red' | 'yellow' | 'purple';
   trend?: number;
 }
-export function StatCard({ icon: Icon, label, value, sub, color = 'cyan', trend }: StatCardProps) {
+export const StatCard = memo(function StatCard({ icon: Icon, label, value, sub, color = 'cyan', trend }: StatCardProps) {
   const colors: Record<string, string> = {
     cyan: 'text-cyan-500 bg-cyan-50 dark:bg-cyan-950/40',
     green: 'text-emerald-500 bg-emerald-50 dark:bg-emerald-950/40',
@@ -149,13 +187,16 @@ export function StatCard({ icon: Icon, label, value, sub, color = 'cyan', trend 
     purple: 'text-purple-500 bg-purple-50 dark:bg-purple-950/40',
   };
   return (
-    <div className="card p-5">
+    <div className="card p-5" role="region" aria-label={label}>
       <div className="flex items-start justify-between mb-3">
-        <div className={`p-2.5 rounded-xl ${colors[color]}`}>
+        <div className={`p-2.5 rounded-xl ${colors[color]}`} aria-hidden="true">
           <Icon className="w-5 h-5" />
         </div>
         {trend !== undefined && (
-          <span className={trend >= 0 ? 'text-emerald-500 text-xs font-semibold' : 'text-red-500 text-xs font-semibold'}>
+          <span
+            className={trend >= 0 ? 'text-emerald-500 text-xs font-semibold' : 'text-red-500 text-xs font-semibold'}
+            aria-label={`Trend: ${trend >= 0 ? 'up' : 'down'} ${Math.abs(trend)}%`}
+          >
             {trend >= 0 ? '↑' : '↓'} {Math.abs(trend)}%
           </span>
         )}
@@ -165,4 +206,4 @@ export function StatCard({ icon: Icon, label, value, sub, color = 'cyan', trend 
       {sub && <div className="text-xs text-[var(--text-muted)] mt-1">{sub}</div>}
     </div>
   );
-}
+});

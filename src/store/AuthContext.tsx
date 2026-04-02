@@ -1,4 +1,10 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+/**
+ * AuthContext — thin compatibility shim over Redux Toolkit authSlice.
+ * All components continue using `useAuth()` without any changes.
+ */
+import { useCallback } from 'react';
+import { useAppDispatch, useAppSelector } from './hooks';
+import { loginSuccess, logoutSuccess } from './slices/authSlice';
 
 interface User {
   id: number;
@@ -13,51 +19,25 @@ interface Tokens {
   refreshToken: string;
 }
 
-interface AuthContextType {
-  user: User | null;
-  login: (userData: User, tokens: Tokens) => void;
-  logout: () => void;
-  isAdmin: boolean;
-  isAuthenticated: boolean;
-}
+export function useAuth() {
+  const dispatch = useAppDispatch();
+  const { user, isAuthenticated, isAdmin } = useAppSelector((s) => s.auth);
 
-const AuthContext = createContext<AuthContextType | null>(null);
-
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => {
-    try {
-      const u = sessionStorage.getItem('user');
-      return u ? JSON.parse(u) : null;
-    } catch { return null; }
-  });
-
-  const login = useCallback((userData: User, tokens: Tokens) => {
-    sessionStorage.setItem('accessToken', tokens.accessToken);
-    sessionStorage.setItem('refreshToken', tokens.refreshToken);
-    sessionStorage.setItem('userId', String(userData.id));
-    sessionStorage.setItem('userRole', userData.role);
-    sessionStorage.setItem('userEmail', userData.email);
-    sessionStorage.setItem('user', JSON.stringify(userData));
-    setUser(userData);
-  }, []);
+  const login = useCallback(
+    (userData: User, tokens: Tokens) => {
+      dispatch(loginSuccess({ userData, tokens }));
+    },
+    [dispatch]
+  );
 
   const logout = useCallback(() => {
-    sessionStorage.clear();
-    setUser(null);
-  }, []);
+    dispatch(logoutSuccess());
+  }, [dispatch]);
 
-  const isAdmin = user?.role === 'ADMIN';
-  const isAuthenticated = !!user;
-
-  return (
-    <AuthContext.Provider value={{ user, login, logout, isAdmin, isAuthenticated }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return { user, isAuthenticated, isAdmin, login, logout };
 }
 
-export const useAuth = (): AuthContextType => {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be inside AuthProvider');
-  return ctx;
-};
+// Legacy provider — now a no-op passthrough (Provider is in main.tsx via Redux <Provider>)
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  return <>{children}</>;
+}
