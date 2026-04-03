@@ -1,166 +1,122 @@
 import { InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes, ReactNode, ElementType, memo } from 'react';
-import { CheckCircle } from 'lucide-react';
+import { Search, CheckCircle } from 'lucide-react';
 
-// ─── Shared error type (compatible with react-hook-form FieldError) ─────────
-export interface FieldErrorLike {
-  message?: string;
-}
+// ─── Shared error type (compatible with react-hook-form FieldError) ──────────
+export interface FieldErrorLike { message?: string; }
 
-// ─── Form Group wrapper ───────────────────────────────────────────────────────
-interface FormGroupProps {
-  label?: string;
-  error?: FieldErrorLike;
-  children: ReactNode;
-  className?: string;
-}
+function cls(...parts: (string | false | undefined)[]) { return parts.filter(Boolean).join(' '); }
 
-export function FormGroup({ label, error, children, className = '' }: FormGroupProps) {
+// ─── FormGroup ────────────────────────────────────────────────────────────────
+interface FormGroupProps { label?: string; htmlFor?: string; error?: FieldErrorLike; children: ReactNode; className?: string; }
+export function FormGroup({ label, htmlFor, error, children, className = '' }: FormGroupProps) {
   return (
     <div className={className}>
-      {label && <label className="label">{label}</label>}
+      {label && <label className="label" htmlFor={htmlFor}>{label}</label>}
       {children}
-      {error && (
-        <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1" role="alert">
-          {error.message}
-        </p>
-      )}
+      {error?.message && <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1" role="alert">{error.message}</p>}
     </div>
   );
 }
 
-// ─── Input Field ──────────────────────────────────────────────────────────────
-interface InputFieldProps extends InputHTMLAttributes<HTMLInputElement> {
-  label?: string;
-  icon?: ElementType;
-  error?: FieldErrorLike;
+// ─── InputField ───────────────────────────────────────────────────────────────
+export interface InputFieldProps extends InputHTMLAttributes<HTMLInputElement> {
+  label?:        string;
+  icon?:         ElementType;
+  error?:        FieldErrorLike;
   rightElement?: ReactNode;
+  hint?:         string;
 }
 
-export const InputField = memo(function InputField({
-  label,
-  icon: Icon,
-  error,
-  rightElement,
-  className = '',
-  ...props
-}: InputFieldProps) {
+export const InputField = memo(function InputField({ label, icon: Icon, error, rightElement, hint, className = '', id, ...props }: InputFieldProps) {
+  const inputId = id ?? (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
   return (
-    <FormGroup label={label} error={error}>
+    <FormGroup label={label} htmlFor={inputId} error={error}>
       <div className="relative">
-        {Icon && (
-          <Icon
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)] pointer-events-none"
-            aria-hidden="true"
-          />
-        )}
+        {Icon && <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)] pointer-events-none" aria-hidden="true" />}
         <input
-          className={`
-            input-field
-            ${Icon ? 'pl-10' : ''}
-            ${rightElement ? 'pr-12' : ''}
-            ${error ? 'border-red-500 focus:ring-red-500/50' : ''}
-            ${className}
-          `}
+          id={inputId}
+          className={cls('input-field', Icon && 'pl-10', rightElement && 'pr-12', error && 'border-red-500 focus:ring-red-500/50', className)}
           {...props}
         />
-        {rightElement && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2">{rightElement}</div>
-        )}
+        {rightElement && <div className="absolute right-3 top-1/2 -translate-y-1/2">{rightElement}</div>}
       </div>
+      {hint && !error && <p className="text-xs text-[var(--text-muted)] mt-1.5 flex items-center gap-1">{hint}</p>}
     </FormGroup>
   );
 });
 
-// ─── Select Field ─────────────────────────────────────────────────────────────
-interface SelectFieldProps extends SelectHTMLAttributes<HTMLSelectElement> {
-  label?: string;
-  error?: FieldErrorLike;
+// ─── SelectField ──────────────────────────────────────────────────────────────
+export interface SelectFieldProps extends SelectHTMLAttributes<HTMLSelectElement> {
+  label?:       string;
+  error?:       FieldErrorLike;
   placeholder?: string;
-  options: { value: string; label: string }[];
+  options:      { value: string; label: string }[];
 }
 
-export const SelectField = memo(function SelectField({
-  label,
-  error,
-  placeholder,
-  options,
-  className = '',
-  ...props
-}: SelectFieldProps) {
+export const SelectField = memo(function SelectField({ label, error, placeholder, options, className = '', id, ...props }: SelectFieldProps) {
+  const selectId = id ?? (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
   return (
-    <FormGroup label={label} error={error}>
-      <select
-        className={`input-field ${error ? 'border-red-500 focus:ring-red-500/50' : ''} ${className}`}
-        {...props}
-      >
+    <FormGroup label={label} htmlFor={selectId} error={error}>
+      <select id={selectId} className={cls('input-field', error && 'border-red-500 focus:ring-red-500/50', className)} {...props}>
         {placeholder && <option value="">{placeholder}</option>}
-        {options.map(({ value, label: optLabel }) => (
-          <option key={value} value={value}>
-            {optLabel}
-          </option>
-        ))}
+        {options.map(({ value, label: l }) => <option key={value} value={value}>{l}</option>)}
       </select>
     </FormGroup>
   );
 });
 
-// ─── Textarea Field ───────────────────────────────────────────────────────────
-interface TextareaFieldProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
+// ─── TextareaField ────────────────────────────────────────────────────────────
+export interface TextareaFieldProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string;
   error?: FieldErrorLike;
 }
 
-export const TextareaField = memo(function TextareaField({
-  label,
-  error,
-  className = '',
-  ...props
-}: TextareaFieldProps) {
+export const TextareaField = memo(function TextareaField({ label, error, className = '', id, ...props }: TextareaFieldProps) {
+  const areaId = id ?? (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
   return (
-    <FormGroup label={label} error={error}>
-      <textarea
-        className={`input-field resize-none ${error ? 'border-red-500 focus:ring-red-500/50' : ''} ${className}`}
-        {...props}
-      />
+    <FormGroup label={label} htmlFor={areaId} error={error}>
+      <textarea id={areaId} className={cls('input-field resize-none', error && 'border-red-500 focus:ring-red-500/50', className)} {...props} />
     </FormGroup>
   );
 });
 
-// ─── Search Input ─────────────────────────────────────────────────────────────
-import { Search } from 'lucide-react';
-
-interface SearchInputProps extends InputHTMLAttributes<HTMLInputElement> {
+// ─── SearchInput ──────────────────────────────────────────────────────────────
+export interface SearchInputProps extends InputHTMLAttributes<HTMLInputElement> {
   containerClassName?: string;
 }
 
-export const SearchInput = memo(function SearchInput({
-  className = '',
-  containerClassName = '',
-  ...props
-}: SearchInputProps) {
+export const SearchInput = memo(function SearchInput({ className = '', containerClassName = '', ...props }: SearchInputProps) {
   return (
-    <div className={`relative ${containerClassName}`}>
-      <Search
-        className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)] pointer-events-none"
-        aria-hidden="true"
-      />
-      <input
-        type="search"
-        className={`input-field pl-9 ${className}`}
-        {...props}
-      />
+    <div className={cls('relative', containerClassName)}>
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)] pointer-events-none" aria-hidden="true" />
+      <input type="search" className={cls('input-field pl-9', className)} {...props} />
     </div>
   );
 });
 
-// ─── OTP Input ────────────────────────────────────────────────────────────────
-interface OtpInputProps {
-  value: string;
-  onChange: (v: string) => void;
-  length?: number;
+// ─── AmountInput ──────────────────────────────────────────────────────────────
+export interface AmountInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
+  label?:    string;
+  error?:    FieldErrorLike;
+  currency?: string;
+  hint?:     string;
 }
 
-export function OtpInput({ value, onChange, length = 6 }: OtpInputProps) {
+export const AmountInput = memo(function AmountInput({ label, error, currency = '₹', hint, className = '', id, ...props }: AmountInputProps) {
+  const inputId = id ?? (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+  return (
+    <FormGroup label={label} htmlFor={inputId} error={error}>
+      <div className="relative">
+        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] font-medium pointer-events-none select-none">{currency}</span>
+        <input id={inputId} type="number" inputMode="decimal" className={cls('input-field pl-8', error && 'border-red-500 focus:ring-red-500/50', className)} {...props} />
+      </div>
+      {hint && !error && <p className="text-xs text-[var(--text-muted)] mt-1.5">{hint}</p>}
+    </FormGroup>
+  );
+});
+
+// ─── OtpInput ─────────────────────────────────────────────────────────────────
+export function OtpInput({ value, onChange, length = 6 }: { value: string; onChange: (v: string) => void; length?: number; }) {
   return (
     <div className="flex gap-2 justify-center" role="group" aria-label="OTP input">
       {Array.from({ length }).map((_, i) => (
@@ -176,14 +132,11 @@ export function OtpInput({ value, onChange, length = 6 }: OtpInputProps) {
             const arr = value.split('');
             arr[i] = char;
             onChange(arr.join('').slice(0, length));
-            if (char && e.target.nextElementSibling) {
-              (e.target.nextElementSibling as HTMLInputElement).focus();
-            }
+            if (char && e.target.nextElementSibling) (e.target.nextElementSibling as HTMLInputElement).focus();
           }}
           onKeyDown={(e) => {
-            if (e.key === 'Backspace' && !value[i] && e.currentTarget.previousElementSibling) {
+            if (e.key === 'Backspace' && !value[i] && e.currentTarget.previousElementSibling)
               (e.currentTarget.previousElementSibling as HTMLInputElement).focus();
-            }
           }}
           className="w-11 h-12 text-center text-lg font-bold bg-slate-50 dark:bg-slate-800/80 border border-[var(--border)] rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all"
         />
@@ -192,90 +145,38 @@ export function OtpInput({ value, onChange, length = 6 }: OtpInputProps) {
   );
 }
 
-// ─── Password Strength ────────────────────────────────────────────────────────
-interface PasswordStrengthProps {
-  password: string;
-}
-
+// ─── PasswordStrength ─────────────────────────────────────────────────────────
 const PW_CHECKS = [
-  { label: 'Uppercase', test: (pw: string) => /[A-Z]/.test(pw) },
-  { label: 'Number',    test: (pw: string) => /\d/.test(pw) },
-  { label: 'Symbol',    test: (pw: string) => /[@$!%*?&]/.test(pw) },
-  { label: '8+ chars',  test: (pw: string) => pw.length >= 8 },
+  { label: 'Uppercase', test: (p: string) => /[A-Z]/.test(p) },
+  { label: 'Number',    test: (p: string) => /\d/.test(p) },
+  { label: 'Symbol',    test: (p: string) => /[@$!%*?&]/.test(p) },
+  { label: '8+ chars',  test: (p: string) => p.length >= 8 },
 ];
+const PW_COLORS = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-emerald-500'];
+const PW_LABELS = ['Weak', 'Fair', 'Good', 'Strong'];
 
-const PW_SCORE_COLORS = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-emerald-500'];
-const PW_SCORE_LABELS = ['Weak', 'Fair', 'Good', 'Strong'];
-
-export function PasswordStrength({ password }: PasswordStrengthProps) {
+export function PasswordStrength({ password }: { password: string }) {
   if (!password) return null;
-
   const checks = PW_CHECKS.map((c) => ({ ...c, ok: c.test(password) }));
-  const score = checks.filter((c) => c.ok).length;
-
+  const score  = checks.filter((c) => c.ok).length;
   return (
     <div className="mt-2.5 space-y-2" aria-label="Password strength">
       <div className="flex gap-1" role="progressbar" aria-valuenow={score} aria-valuemax={4}>
         {[0, 1, 2, 3].map((i) => (
-          <div
-            key={i}
-            className={`h-1.5 flex-1 rounded-full transition-all ${
-              i < score ? PW_SCORE_COLORS[score - 1] : 'bg-slate-200 dark:bg-slate-700'
-            }`}
-          />
+          <div key={i} className={cls('h-1.5 flex-1 rounded-full transition-all', i < score ? PW_COLORS[score - 1] : 'bg-slate-200 dark:bg-slate-700')} />
         ))}
       </div>
       <div className="flex items-center justify-between">
         <div className="flex gap-3 flex-wrap">
           {checks.map((c) => (
-            <div
-              key={c.label}
-              className={`flex items-center gap-1 text-xs ${
-                c.ok ? 'text-emerald-500' : 'text-[var(--text-muted)]'
-              }`}
-            >
-              <CheckCircle className={`w-3 h-3 ${c.ok ? '' : 'opacity-40'}`} aria-hidden="true" />
+            <div key={c.label} className={cls('flex items-center gap-1 text-xs', c.ok ? 'text-emerald-500' : 'text-[var(--text-muted)]')}>
+              <CheckCircle className={cls('w-3 h-3', !c.ok && 'opacity-40')} aria-hidden="true" />
               {c.label}
             </div>
           ))}
         </div>
-        {score > 0 && (
-          <span className={`text-xs font-semibold ${PW_SCORE_COLORS[score - 1].replace('bg-', 'text-')}`}>
-            {PW_SCORE_LABELS[score - 1]}
-          </span>
-        )}
+        {score > 0 && <span className={cls('text-xs font-semibold', PW_COLORS[score - 1].replace('bg-', 'text-'))}>{PW_LABELS[score - 1]}</span>}
       </div>
     </div>
   );
 }
-
-// ─── Amount Input ─────────────────────────────────────────────────────────────
-interface AmountInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
-  label?: string;
-  error?: FieldErrorLike;
-  currency?: string;
-}
-
-export const AmountInput = memo(function AmountInput({
-  label,
-  error,
-  currency = '₹',
-  className = '',
-  ...props
-}: AmountInputProps) {
-  return (
-    <FormGroup label={label} error={error}>
-      <div className="relative">
-        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] font-medium pointer-events-none">
-          {currency}
-        </span>
-        <input
-          type="number"
-          inputMode="decimal"
-          className={`input-field pl-8 ${error ? 'border-red-500 focus:ring-red-500/50' : ''} ${className}`}
-          {...props}
-        />
-      </div>
-    </FormGroup>
-  );
-});

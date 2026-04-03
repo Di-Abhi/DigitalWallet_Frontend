@@ -5,32 +5,23 @@ import { StatusBadge, LoadingPage } from '../../shared/components/UI';
 import { toast } from '../../shared/components/Toast';
 import { useAuth } from '../../store/AuthContext';
 import { useNotifications } from '../../store/NotificationContext';
+import { Button } from '../../shared/components/Button';
+import { InputField, SelectField } from '../../shared/components/Input';
 
 const DOC_TYPES = ['AADHAAR', 'PAN', 'PASSPORT', 'DRIVING_LICENSE'];
+const DOC_OPTIONS = DOC_TYPES.map((d) => ({ value: d, label: d }));
 
-interface Profile {
-  name?: string;
-  email?: string;
-  phone?: string;
-  status?: string;
-  createdAt?: string;
-}
-interface KycData {
-  status: string;
-  docType?: string;
-  docNumber?: string;
-  submittedAt?: string;
-  rejectionReason?: string;
-}
+interface Profile { name?: string; email?: string; phone?: string; status?: string; createdAt?: string; }
+interface KycData  { status: string; docType?: string; docNumber?: string; submittedAt?: string; rejectionReason?: string; }
 
 export default function ProfilePage() {
-  const { user } = useAuth();
-  const { addNotification } = useNotifications();
+  const { user }              = useAuth();
+  const { addNotification }   = useNotifications();
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [kyc, setKyc] = useState<KycData | null>(null);
+  const [kyc, setKyc]         = useState<KycData | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ name: '', phone: '' });
+  const [form, setForm]       = useState({ name: '', phone: '' });
   const [saveLoading, setSaveLoading] = useState(false);
   const [kycForm, setKycForm] = useState({ docType: 'AADHAAR', docNumber: '' });
   const [kycFile, setKycFile] = useState<File | null>(null);
@@ -38,7 +29,7 @@ export default function ProfilePage() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const load = async () => {
+    (async () => {
       try {
         const [pRes, kRes] = await Promise.allSettled([userApi.profile(), userApi.kycStatus()]);
         if (pRes.status === 'fulfilled') {
@@ -48,8 +39,7 @@ export default function ProfilePage() {
         if (kRes.status === 'fulfilled') setKyc(kRes.value.data.data);
       } catch { }
       finally { setLoading(false); }
-    };
-    load();
+    })();
   }, []);
 
   const saveProfile = async () => {
@@ -84,19 +74,18 @@ export default function ProfilePage() {
   if (loading) return <LoadingPage />;
 
   const kycStatusIcons: Record<string, React.ReactNode> = {
-    APPROVED: <CheckCircle className="w-5 h-5 text-emerald-500" />,
-    PENDING: <Clock className="w-5 h-5 text-yellow-500" />,
-    REJECTED: <XCircle className="w-5 h-5 text-red-500" />,
-    NOT_SUBMITTED: <FileText className="w-5 h-5 text-slate-400" />,
+    APPROVED:      <CheckCircle className="w-5 h-5 text-emerald-500" />,
+    PENDING:       <Clock       className="w-5 h-5 text-yellow-500" />,
+    REJECTED:      <XCircle     className="w-5 h-5 text-red-500" />,
+    NOT_SUBMITTED: <FileText    className="w-5 h-5 text-slate-400" />,
   };
-
   const kycStatus = kyc?.status || 'NOT_SUBMITTED';
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
       <h1 className="text-2xl font-bold">Profile & KYC</h1>
 
-      {/* Profile card */}
+      {/* ── Profile card ─────────────────────────────────────────────── */}
       <div className="card p-6">
         <div className="flex items-center gap-4 mb-6">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center text-white text-2xl font-bold">
@@ -110,33 +99,31 @@ export default function ProfilePage() {
               <span className="badge-blue">{user?.role}</span>
             </div>
           </div>
-          <button className="btn-secondary ml-auto text-sm" onClick={() => setEditing((v) => !v)}>
+          <Button variant="secondary" size="sm" className="ml-auto" onClick={() => setEditing((v) => !v)}>
             {editing ? 'Cancel' : 'Edit'}
-          </button>
+          </Button>
         </div>
 
         {editing ? (
           <div className="space-y-4">
-            <div>
-              <label className="label">Full Name</label>
-              <input className="input-field" value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })} />
-            </div>
-            <div>
-              <label className="label">Phone</label>
-              <input className="input-field" value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-            </div>
-            <button className="btn-primary" onClick={saveProfile} disabled={saveLoading}>
-              {saveLoading ? 'Saving…' : 'Save Changes'}
-            </button>
+            <InputField
+              label="Full Name"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+            />
+            <InputField
+              label="Phone"
+              value={form.phone}
+              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+            />
+            <Button loading={saveLoading} onClick={saveProfile}>Save Changes</Button>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-4">
             {[
-              { label: 'Email', val: profile?.email },
-              { label: 'Phone', val: profile?.phone },
-              { label: 'KYC Status', val: <StatusBadge status={kycStatus} /> },
+              { label: 'Email',        val: profile?.email },
+              { label: 'Phone',        val: profile?.phone },
+              { label: 'KYC Status',   val: <StatusBadge status={kycStatus} /> },
               { label: 'Member Since', val: profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString('en-IN') : '—' },
             ].map(({ label, val }) => (
               <div key={label}>
@@ -148,10 +135,10 @@ export default function ProfilePage() {
         )}
       </div>
 
-      {/* KYC card */}
+      {/* ── KYC card ─────────────────────────────────────────────────── */}
       <div className="card p-6">
         <div className="flex items-center gap-3 mb-5">
-          {kycStatusIcons[kycStatus] || kycStatusIcons.NOT_SUBMITTED}
+          {kycStatusIcons[kycStatus] ?? kycStatusIcons.NOT_SUBMITTED}
           <div>
             <h2 className="font-bold">KYC Verification</h2>
             <p className="text-xs text-[var(--text-muted)]">Complete KYC to unlock all wallet features</p>
@@ -166,30 +153,36 @@ export default function ProfilePage() {
             <div><span className="text-[var(--text-muted)]">Submitted: </span>
               <span className="font-semibold">{kyc.submittedAt ? new Date(kyc.submittedAt).toLocaleDateString() : '—'}</span>
             </div>
-            {kyc.rejectionReason && (
-              <div className="col-span-2 text-red-500 text-xs">Reason: {kyc.rejectionReason}</div>
-            )}
+            {kyc.rejectionReason && <div className="col-span-2 text-red-500 text-xs">Reason: {kyc.rejectionReason}</div>}
           </div>
         )}
 
         {(kycStatus === 'NOT_SUBMITTED' || kycStatus === 'REJECTED') && (
           <div className="space-y-4">
-            <div>
-              <label className="label">Document Type</label>
-              <select className="input-field" value={kycForm.docType}
-                onChange={(e) => setKycForm({ ...kycForm, docType: e.target.value })}>
-                {DOC_TYPES.map((d) => <option key={d} value={d}>{d}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="label">Document Number</label>
-              <input className="input-field" placeholder="Enter document number" value={kycForm.docNumber}
-                onChange={(e) => setKycForm({ ...kycForm, docNumber: e.target.value })} />
-            </div>
+            <SelectField
+              label="Document Type"
+              value={kycForm.docType}
+              options={DOC_OPTIONS}
+              onChange={(e) => setKycForm({ ...kycForm, docType: e.target.value })}
+            />
+            <InputField
+              label="Document Number"
+              placeholder="Enter document number"
+              value={kycForm.docNumber}
+              onChange={(e) => setKycForm({ ...kycForm, docNumber: e.target.value })}
+            />
+
+            {/* File upload */}
             <div>
               <label className="label">Upload Document</label>
-              <div className="border-2 border-dashed border-[var(--border)] rounded-xl p-6 text-center cursor-pointer hover:border-cyan-500 transition-colors"
-                onClick={() => fileRef.current?.click()}>
+              <div
+                className="border-2 border-dashed border-[var(--border)] rounded-xl p-6 text-center cursor-pointer hover:border-cyan-500 transition-colors"
+                onClick={() => fileRef.current?.click()}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && fileRef.current?.click()}
+                aria-label="Upload KYC document"
+              >
                 {kycFile ? (
                   <div className="flex items-center justify-center gap-2 text-emerald-500">
                     <CheckCircle className="w-5 h-5" />
@@ -206,9 +199,10 @@ export default function ProfilePage() {
               <input ref={fileRef} type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png"
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setKycFile(e.target.files?.[0] ?? null)} />
             </div>
-            <button className="btn-primary w-full" onClick={submitKyc} disabled={kycLoading}>
-              {kycLoading ? 'Submitting…' : 'Submit KYC Documents'}
-            </button>
+
+            <Button fullWidth loading={kycLoading} onClick={submitKyc}>
+              Submit KYC Documents
+            </Button>
           </div>
         )}
 
