@@ -1,7 +1,7 @@
 import { getApiErrorMessage, isWalletNotFound } from '../../core/api/types';
 import { useState, ChangeEvent, FormEvent } from 'react';
 import { Send, User, Info, CheckCircle } from 'lucide-react';
-import { walletApi, userApi } from '../../core/api/services';
+import { walletApi, userApi } from '../../core/api/adminApi';
 import { toast } from '../../shared/components/Toast';
 import { useNotifications } from '../../store/NotificationContext';
 import { Spinner } from '../../shared/components/UI';

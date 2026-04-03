@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Gift, Star, Zap, Award, ShoppingBag, RefreshCw, History } from 'lucide-react';
-import { rewardsApi } from '../../core/api/services';
+import { rewardsApi } from '../../core/api/rewardApi';
 import { Modal, StatusBadge, LoadingPage, EmptyState } from '../../shared/components/UI';
 import { toast } from '../../shared/components/Toast';
 import { useNotifications } from '../../store/NotificationContext';

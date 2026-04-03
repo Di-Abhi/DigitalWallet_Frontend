@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Receipt, Download, Search, ArrowUpRight, ArrowDownLeft, Flag } from 'lucide-react';
-import { walletApi } from '../../core/api/services';
+import { walletApi } from '../../core/api/walletApi';
 import { StatusBadge, LoadingPage, EmptyState } from '../../shared/components/UI';
 import { toast } from '../../shared/components/Toast';
 import { useDebounce } from '../../store/hooks';

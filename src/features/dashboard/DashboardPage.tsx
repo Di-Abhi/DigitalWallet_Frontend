@@ -2,11 +2,13 @@ import { isWalletNotFound } from '../../core/api/types';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Wallet, Send, Plus, Gift, ArrowUpRight, ArrowDownLeft, TrendingUp, Clock } from 'lucide-react';
-import { walletApi, rewardsApi, userApi } from '../../core/api/services';
+import { userApi } from '../../core/api/userApi';
 import { StatCard, StatusBadge, LoadingPage } from '../../shared/components/UI';
 import { toast } from '../../shared/components/Toast';
 import { useAuth } from '../../store/AuthContext';
 import NoWalletBanner from '../../shared/components/NoWalletBanner';
+import { walletApi } from '../../core/api/walletApi';
+import { rewardsApi } from '../../core/api/rewardApi';
 
 function formatAmount(a: number | undefined | null): string {
   return `₹${Number(a || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, ChangeEvent } from 'react';
 import { FileText, CheckCircle, Clock, XCircle, Upload } from 'lucide-react';
-import { userApi } from '../../core/api/services';
+import { userApi } from '../../core/api/userApi';
 import { StatusBadge, LoadingPage } from '../../shared/components/UI';
 import { toast } from '../../shared/components/Toast';
 import { useAuth } from '../../store/AuthContext';

@@ -7,7 +7,7 @@ import {
 import { useAuth } from '../store/AuthContext';
 import { useTheme } from '../store/ThemeContext';
 import { useNotifications } from '../store/NotificationContext';
-import { authApi } from '../core/api/services';
+import { authApi } from '../core/api/authApi';
 import { toast } from '../shared/components/Toast';
 
 interface NavItem {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, ChangeEvent, useMemo } from 'react';
 import { Users, Shield, AlertTriangle, TrendingUp, Search, Check, X, RefreshCw, Plus, UsersIcon, LayoutDashboardIcon, User, File, Gift, LucideIcon } from 'lucide-react';
-import { adminApi } from '../../core/api/services';
+import { adminApi } from '../../core/api/adminApi';
 import { StatCard, StatusBadge, LoadingPage, Modal, EmptyState } from '../../shared/components/UI';
 import { toast } from '../../shared/components/Toast';
 import { useNotifications } from '../../store/NotificationContext';

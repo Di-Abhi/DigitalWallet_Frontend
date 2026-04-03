@@ -6,7 +6,7 @@ import {
   Shield, CheckCircle, Zap, Gift
 } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
-import { authApi } from '../../core/api/services';
+import { authApi } from '../../core/api/authApi';
 import { toast } from '../../shared/components/Toast';
 import { Spinner } from '../../shared/components/UI';
 import { useTheme } from '../../store/ThemeContext';

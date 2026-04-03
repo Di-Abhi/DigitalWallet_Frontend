@@ -1,13 +1,14 @@
 import { isWalletNotFound, getApiErrorMessage } from '../../core/api/types';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Wallet, Plus, ArrowDownLeft, Download, RefreshCw, CheckCircle, XCircle, Loader, Trophy } from 'lucide-react';
-import { walletApi, userApi } from '../../core/api/services';
+import { userApi } from '../../core/api/userApi';
 import { Modal, StatusBadge, LoadingPage, EmptyState } from '../../shared/components/UI';
 import { toast } from '../../shared/components/Toast';
 import { useNotifications } from '../../store/NotificationContext';
 import { useAuth } from '../../store/AuthContext';
 import NoWalletBanner from '../../shared/components/NoWalletBanner';
 import { ScratchCardModal } from '../../shared/components/ScratchCard';
+import { walletApi } from '../../core/api/walletApi';
 
 
 type KycStatus = 'NOT_SUBMITTED' | 'PENDING' | 'REJECTED' | 'APPROVED' | null;
