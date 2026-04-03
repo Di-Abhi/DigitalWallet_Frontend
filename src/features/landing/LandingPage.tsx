@@ -5,6 +5,7 @@ import {
   Mail, Phone, ChevronRight, Award, Users, CreditCard, Share2
 } from 'lucide-react';
 import { useTheme } from '../../store/ThemeContext';
+import { ROUTES } from '../../routes';
 
 // ─── Navbar ───────────────────────────────────────────────────────────────────
 function LandingNavbar() {
@@ -36,8 +37,8 @@ function LandingNavbar() {
             <button onClick={toggle} className="btn-ghost p-2 rounded-xl text-sm">
               {isDark ? '☀️' : '🌙'}
             </button>
-            <Link to="/login" className="btn-secondary text-sm px-4 py-2 hidden sm:flex">Sign in</Link>
-            <Link to="/signup" className="btn-primary text-sm px-4 py-2">Get Started</Link>
+            <Link to={ROUTES.LOGIN} className="btn-secondary text-sm px-4 py-2 hidden sm:flex">Sign in</Link>
+            <Link to={ROUTES.SIGNUP} className="btn-primary text-sm px-4 py-2">Get Started</Link>
           </div>
         </div>
       </div>
@@ -77,12 +78,12 @@ function HeroSection() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
-            <Link to="/signup"
+            <Link to={ROUTES.SIGNUP}
               className="btn-primary text-base px-8 py-3.5 shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all">
               <span>Create free account</span>
               <ArrowRight className="w-5 h-5" />
             </Link>
-            <Link to="/login"
+            <Link to={ROUTES.LOGIN}
               className="btn-secondary text-base px-8 py-3.5 flex items-center gap-2">
               Sign in <ChevronRight className="w-4 h-4" />
             </Link>
@@ -352,7 +353,7 @@ function PricingSection() {
                   </li>
                 ))}
               </ul>
-              <Link to="/signup"
+              <Link to={ROUTES.SIGNUP}
                 className={p.highlight ? 'btn-primary w-full justify-center' : 'btn-secondary w-full text-center flex items-center justify-center gap-2'}>
                 {p.cta}
               </Link>
@@ -425,11 +426,11 @@ function CTASection() {
               Create a free account in under 60 seconds. No credit card required.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/signup" className="btn-primary text-base px-8 py-3.5 shadow-lg shadow-cyan-500/25">
+              <Link to={ROUTES.SIGNUP} className="btn-primary text-base px-8 py-3.5 shadow-lg shadow-cyan-500/25">
                 <span>Create free account</span>
                 <ArrowRight className="w-5 h-5" />
               </Link>
-              <Link to="/login" className="btn-secondary text-base px-8 py-3.5 flex items-center justify-center gap-2">
+              <Link to={ROUTES.LOGIN} className="btn-secondary text-base px-8 py-3.5 flex items-center justify-center gap-2">
                 Sign in instead
               </Link>
             </div>

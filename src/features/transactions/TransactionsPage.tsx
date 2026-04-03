@@ -5,16 +5,11 @@ import { StatusBadge, LoadingPage, EmptyState } from '../../shared/components/UI
 import { toast } from '../../shared/components/Toast';
 import { useDebounce } from '../../store/hooks';
 import { getApiErrorMessage } from '../../core/api/types';
+import { formatCurrency as fmt, formatDateTime as fmtDate, downloadCsv } from '../../shared/utils';
+import { Button, Pagination } from '../../shared/components/Button';
+import { SearchInput, SelectField } from '../../shared/components/Input';
 
-function fmt(a: number): string {
-  return `₹${Number(a || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-}
-function fmtDate(d?: string | null): string {
-  return d ? new Date(d).toLocaleString('en-IN', {
-    day: '2-digit', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  }) : '—';
-}
+// fmt/fmtDate → imported from '../../shared/utils'
 
 const CREDIT_TYPES = ['TOPUP', 'CASHBACK'];
 const TX_TYPES = ['TOPUP', 'TRANSFER', 'WITHDRAW', 'CASHBACK', 'REDEEM'];

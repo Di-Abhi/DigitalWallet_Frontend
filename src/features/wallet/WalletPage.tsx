@@ -1,4 +1,7 @@
 import { isWalletNotFound, getApiErrorMessage } from '../../core/api/types';
+import { formatCurrency as fmt, formatDateTime as fmtDate, downloadCsv } from '../../shared/utils';
+import { Button, Pagination } from '../../shared/components/Button';
+import { InputField, AmountInput } from '../../shared/components/Input';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Wallet, Plus, ArrowDownLeft, Download, RefreshCw, CheckCircle, XCircle, Loader, Trophy } from 'lucide-react';
 import { userApi } from '../../core/api/userApi';
@@ -21,15 +24,7 @@ declare global {
 
 const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY || 'rzp_test_SXNZeesPumUKeY';
 
-function fmt(a: number | string | undefined | null): string {
-  return `₹${Number(a || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-}
-function fmtDate(d?: string | null): string {
-  return d ? new Date(d).toLocaleString('en-IN', {
-    day: '2-digit', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  }) : '—';
-}
+// fmt/fmtDate → imported from '../../shared/utils'
 
 function loadRazorpayScript(): Promise<boolean> {
   return new Promise((resolve) => {

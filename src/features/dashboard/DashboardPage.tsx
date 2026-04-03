@@ -1,4 +1,5 @@
 import { isWalletNotFound } from '../../core/api/types';
+import { formatCurrency as formatAmount, formatDate } from '../../shared/utils';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Wallet, Send, Plus, Gift, ArrowUpRight, ArrowDownLeft, TrendingUp, Clock } from 'lucide-react';
@@ -9,13 +10,9 @@ import { useAuth } from '../../store/AuthContext';
 import NoWalletBanner from '../../shared/components/NoWalletBanner';
 import { walletApi } from '../../core/api/walletApi';
 import { rewardsApi } from '../../core/api/rewardApi';
+import { ROUTES } from '../../routes';
 
-function formatAmount(a: number | undefined | null): string {
-  return `₹${Number(a || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-}
-function formatDate(d: string | undefined | null): string {
-  return d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
-}
+// formatAmount/formatDate → imported from '../../shared/utils'
 
 
 interface Balance { balance: number; status: string; }
@@ -119,13 +116,13 @@ export default function DashboardPage() {
           <div className="amount text-4xl font-bold mb-1">{formatAmount(balance?.balance)}</div>
           <div className="text-sm opacity-70 mb-6">Status: {balance?.status || 'Active'}</div>
           <div className="flex gap-3 flex-wrap">
-            <Link to="/wallet" className="flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm px-4 py-2 rounded-xl text-sm font-semibold transition-all">
+            <Link to={ROUTES.WALLET} className="flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm px-4 py-2 rounded-xl text-sm font-semibold transition-all">
               <Plus className="w-4 h-4" /> Add Money
             </Link>
-            <Link to="/transfer" className="flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm px-4 py-2 rounded-xl text-sm font-semibold transition-all">
+            <Link to={ROUTES.TRANSFER} className="flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm px-4 py-2 rounded-xl text-sm font-semibold transition-all">
               <Send className="w-4 h-4" /> Send
             </Link>
-            <Link to="/rewards" className="flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm px-4 py-2 rounded-xl text-sm font-semibold transition-all">
+            <Link to={ROUTES.REWARDS} className="flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm px-4 py-2 rounded-xl text-sm font-semibold transition-all">
               <Gift className="w-4 h-4" /> Redeem
             </Link>
           </div>
@@ -148,7 +145,7 @@ export default function DashboardPage() {
       <div className="card p-6">
         <div className="flex items-center justify-between mb-5">
           <h2 className="font-bold text-base">Recent Transactions</h2>
-          <Link to="/transactions" className="text-xs text-cyan-500 hover:underline flex items-center gap-1">
+          <Link to={ROUTES.TRANSACTIONS} className="text-xs text-cyan-500 hover:underline flex items-center gap-1">
             View all <ArrowUpRight className="w-3 h-3" />
           </Link>
         </div>

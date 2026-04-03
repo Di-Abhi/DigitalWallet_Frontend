@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
+import { formatCurrency as fmt } from '../../shared/utils';
+import { Button } from '../../shared/components/Button';
 import { Gift, Star, Zap, Award, ShoppingBag, RefreshCw, History } from 'lucide-react';
 import { rewardsApi } from '../../core/api/rewardApi';
 import { Modal, StatusBadge, LoadingPage, EmptyState } from '../../shared/components/UI';
 import { toast } from '../../shared/components/Toast';
 import { useNotifications } from '../../store/NotificationContext';
 
-function fmt(a: number | string): string {
-  return `₹${Number(a || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-}
+// fmt → imported from '../../shared/utils'
 
 const TIER_INFO: Record<string, { color: string; label: string; min: number }> = {
   BRONZE: { color: 'from-orange-400 to-orange-600', label: 'Bronze', min: 0 },

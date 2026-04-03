@@ -1,6 +1,6 @@
-import { useState, InputHTMLAttributes } from 'react';
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useForm, FieldError } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import {
   Wallet, Eye, EyeOff, ArrowRight, Mail, Phone, Lock, User,
   Shield, CheckCircle, Zap, Gift
@@ -10,6 +10,9 @@ import { authApi } from '../../core/api/authApi';
 import { toast } from '../../shared/components/Toast';
 import { Spinner } from '../../shared/components/UI';
 import { useTheme } from '../../store/ThemeContext';
+import { InputField, OtpInput, PasswordStrength } from '../../shared/components/Input';
+import { Button } from '../../shared/components/Button';
+import { ROUTES } from '../../routes';
 
 // ─── Auth Shell ───────────────────────────────────────────────────────────────
 interface AuthShellProps {
@@ -126,101 +129,11 @@ function AuthShell({ children, title, subtitle }: AuthShellProps) {
   );
 }
 
-// ─── Input Group ──────────────────────────────────────────────────────────────
-interface InputGroupProps extends InputHTMLAttributes<HTMLInputElement> {
-  label: string;
-  icon?: React.ElementType;
-  error?: FieldError | { message?: string };
-  rightElement?: React.ReactNode;
-}
+// InputGroup → use <InputField> from '../../shared/components/Input'
 
-function InputGroup({ label, icon: Icon, error, rightElement, ...props }: InputGroupProps) {
-  return (
-    <div>
-      <label className="label">{label}</label>
-      <div className="relative">
-        {Icon && <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)] pointer-events-none" />}
-        <input
-          className={`input-field ${Icon ? 'pl-10' : ''} ${rightElement ? 'pr-12' : ''} ${error ? 'border-red-500 focus:ring-red-500/50' : ''}`}
-          {...props}
-        />
-        {rightElement && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2">{rightElement}</div>
-        )}
-      </div>
-      {error && <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1">{error.message}</p>}
-    </div>
-  );
-}
+// PasswordStrength → use <PasswordStrength> from '../../shared/components/Input'
 
-// ─── Password Strength ────────────────────────────────────────────────────────
-function PasswordStrength({ password }: { password: string }) {
-  const checks = [
-    { label: 'Uppercase', ok: /[A-Z]/.test(password) },
-    { label: 'Number', ok: /\d/.test(password) },
-    { label: 'Symbol', ok: /[@$!%*?&]/.test(password) },
-    { label: '8+ chars', ok: password.length >= 8 },
-  ];
-  const score = checks.filter((c) => c.ok).length;
-  const colors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-emerald-500'];
-  const labels = ['Weak', 'Fair', 'Good', 'Strong'];
-
-  if (!password) return null;
-
-  return (
-    <div className="mt-2.5 space-y-2">
-      <div className="flex gap-1">
-        {[0, 1, 2, 3].map((i) => (
-          <div key={i} className={`h-1.5 flex-1 rounded-full transition-all ${i < score ? colors[score - 1] : 'bg-slate-200 dark:bg-slate-700'}`} />
-        ))}
-      </div>
-      <div className="flex items-center justify-between">
-        <div className="flex gap-3 flex-wrap">
-          {checks.map((c) => (
-            <div key={c.label} className={`flex items-center gap-1 text-xs ${c.ok ? 'text-emerald-500' : 'text-[var(--text-muted)]'}`}>
-              <CheckCircle className={`w-3 h-3 ${c.ok ? '' : 'opacity-40'}`} />
-              {c.label}
-            </div>
-          ))}
-        </div>
-        <span className={`text-xs font-semibold ${colors[score - 1]?.replace('bg-', 'text-') || 'text-[var(--text-muted)]'}`}>
-          {score > 0 ? labels[score - 1] : ''}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-// ─── OTP Input ────────────────────────────────────────────────────────────────
-function OtpInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  return (
-    <div className="flex gap-2 justify-center">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <input
-          key={i}
-          type="text"
-          maxLength={1}
-          value={value[i] || ''}
-          onChange={(e) => {
-            const char = e.target.value.replace(/\D/, '');
-            const arr = value.split('');
-            arr[i] = char;
-            onChange(arr.join('').slice(0, 6));
-            if (char && e.target.nextElementSibling) {
-              (e.target.nextElementSibling as HTMLInputElement).focus();
-            }
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Backspace' && !value[i] && e.currentTarget.previousElementSibling) {
-              (e.currentTarget.previousElementSibling as HTMLInputElement).focus();
-            }
-          }}
-          className="w-11 h-12 text-center text-lg font-bold bg-slate-50 dark:bg-slate-800/80 border border-[var(--border)] rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all"
-        />
-      ))}
-    </div>
-  );
-}
+// OtpInput → use <OtpInput> from '../../shared/components/Input'
 
 // ─── Login Page ───────────────────────────────────────────────────────────────
 interface LoginFormData {
@@ -249,7 +162,7 @@ export function LoginPage() {
       const { accessToken, refreshToken, user } = res.data;
       login(user, { accessToken, refreshToken });
       toast.success(`Welcome back, ${user.fullName}!`);
-      navigate(user.role === 'ADMIN' ? '/admin' : '/dashboard');
+      navigate(user.role === 'ADMIN' ? ROUTES.ADMIN : ROUTES.DASHBOARD);
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Login failed. Please check your credentials.');
     } finally {
@@ -273,11 +186,11 @@ export function LoginPage() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         {mode === 'email' ? (
-          <InputGroup label="Email address" icon={Mail} type="email" placeholder="you@example.com"
+          <InputField label="Email address" icon={Mail} type="email" placeholder="you@example.com"
             error={errors.email}
             {...register('email', { required: 'Email is required' })} />
         ) : (
-          <InputGroup label="Phone number" icon={Phone} type="tel" placeholder="10-digit number"
+          <InputField label="Phone number" icon={Phone} type="tel" placeholder="10-digit number"
             error={errors.phone}
             {...register('phone', {
               required: 'Phone is required',
@@ -288,11 +201,11 @@ export function LoginPage() {
         <div>
           <div className="flex items-center justify-between mb-1.5">
             <label className="label !mb-0">Password</label>
-            <Link to="/forgot-password" className="text-xs text-cyan-500 hover:text-cyan-400 hover:underline font-medium">
+            <Link to={ROUTES.FORGOT_PASSWORD} className="text-xs text-cyan-500 hover:text-cyan-400 hover:underline font-medium">
               Forgot password?
             </Link>
           </div>
-          <InputGroup
+          <InputField
             label=""
             icon={Lock}
             type={showPw ? 'text' : 'password'}
@@ -324,7 +237,7 @@ export function LoginPage() {
         </div>
       </div>
 
-      <Link to="/signup"
+      <Link to={ROUTES.SIGNUP}
         className="btn-secondary w-full text-center flex items-center justify-center gap-2">
         Create free account <ArrowRight className="w-4 h-4" />
       </Link>
@@ -379,7 +292,7 @@ export function SignupPage() {
       const { accessToken, refreshToken, user } = res.data;
       login(user, { accessToken, refreshToken });
       toast.success('Account created! Welcome to PayVault 🎉');
-      navigate('/dashboard');
+      navigate(ROUTES.DASHBOARD);
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Invalid OTP');
     } finally {
@@ -425,17 +338,17 @@ export function SignupPage() {
   return (
     <AuthShell title="Create account" subtitle="Join 2 million users on PayVault">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <InputGroup label="Full name" icon={User} placeholder="John Doe" error={errors.fullName}
+        <InputField label="Full name" icon={User} placeholder="John Doe" error={errors.fullName}
           {...register('fullName', {
             required: 'Name is required',
             minLength: { value: 2, message: 'Min 2 characters' }
           })} />
 
-        <InputGroup label="Email address" icon={Mail} type="email" placeholder="you@example.com"
+        <InputField label="Email address" icon={Mail} type="email" placeholder="you@example.com"
           error={errors.email}
           {...register('email', { required: 'Email is required' })} />
 
-        <InputGroup label="Phone number" icon={Phone} type="tel" placeholder="10-digit number"
+        <InputField label="Phone number" icon={Phone} type="tel" placeholder="10-digit number"
           error={errors.phone}
           {...register('phone', {
             required: 'Phone is required',
@@ -443,7 +356,7 @@ export function SignupPage() {
           })} />
 
         <div>
-          <InputGroup
+          <InputField
             label="Password"
             icon={Lock}
             type={showPw ? 'text' : 'password'}
@@ -484,7 +397,7 @@ export function SignupPage() {
         </div>
       </div>
 
-      <Link to="/login" className="btn-secondary w-full text-center flex items-center justify-center gap-2">
+      <Link to={ROUTES.LOGIN} className="btn-secondary w-full text-center flex items-center justify-center gap-2">
         Sign in instead
       </Link>
 
@@ -536,7 +449,7 @@ export function ForgotPasswordPage() {
     try {
       await authApi.resetPassword({ resetToken, newPassword: password });
       toast.success('Password reset successfully!');
-      navigate('/login');
+      navigate(ROUTES.LOGIN);
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Reset failed');
     } finally { setLoading(false); }
@@ -572,7 +485,7 @@ export function ForgotPasswordPage() {
         {/* Step 1 */}
         {step === 1 && (
           <>
-            <InputGroup label="Email address" icon={Mail} type="email" placeholder="your@email.com"
+            <InputField label="Email address" icon={Mail} type="email" placeholder="your@email.com"
               value={email} onChange={(e) => setEmail(e.target.value)} />
             <button className="btn-primary w-full py-3" onClick={sendOtp} disabled={loading || !email}>
               {loading ? <Spinner size="sm" /> : <><Mail className="w-4 h-4" /> Send OTP</>}
@@ -626,7 +539,7 @@ export function ForgotPasswordPage() {
           </>
         )}
 
-        <Link to="/login" className="btn-ghost w-full text-center text-sm flex items-center justify-center gap-1">
+        <Link to={ROUTES.LOGIN} className="btn-ghost w-full text-center text-sm flex items-center justify-center gap-1">
           ← Back to login
         </Link>
       </div>

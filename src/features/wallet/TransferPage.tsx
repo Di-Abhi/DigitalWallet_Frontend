@@ -1,16 +1,18 @@
 import { getApiErrorMessage, isWalletNotFound } from '../../core/api/types';
+import { formatCurrency as fmt } from '../../shared/utils';
+import { Button } from '../../shared/components/Button';
+import { InputField, AmountInput } from '../../shared/components/Input';
 import { useState, ChangeEvent, FormEvent } from 'react';
 import { Send, User, Info, CheckCircle } from 'lucide-react';
-import { walletApi, userApi } from '../../core/api/adminApi';
+import { userApi } from '../../core/api/userApi';
 import { toast } from '../../shared/components/Toast';
 import { useNotifications } from '../../store/NotificationContext';
 import { Spinner } from '../../shared/components/UI';
 import NoWalletBanner from '../../shared/components/NoWalletBanner';
 import { ScratchCardModal } from '../../shared/components/ScratchCard';
+import { walletApi } from '../../core/api/walletApi';
 
-function fmt(a: number | string): string {
-  return `₹${Number(a || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-}
+// fmt → imported from '../../shared/utils'
 
 type KycStatus = 'NOT_SUBMITTED' | 'PENDING' | 'REJECTED' | 'APPROVED' | null;
 
@@ -153,7 +155,7 @@ export default function TransferPage() {
         </ul>
       </div>
 
-      {/* 🎁 Scratch Card Modal — shown after successful transfer */}
+      {/*  Scratch Card Modal — shown after successful transfer */}
       <ScratchCardModal
         open={scratchModal}
         onClose={() => setScratchModal(false)}
@@ -161,7 +163,7 @@ export default function TransferPage() {
         amount={scratchAmount}
         onPointsEarned={(pts) => {
           toast.success(`+${pts} bonus points added to your rewards!`, 'Scratch Reward');
-          addNotification({ title: '🎁 Scratch Card Reward', message: `You earned ${pts} bonus points!`, type: 'success' });
+          addNotification({ title: 'Scratch Card Reward', message: `You earned ${pts} bonus points!`, type: 'success' });
         }}
       />
     </div>

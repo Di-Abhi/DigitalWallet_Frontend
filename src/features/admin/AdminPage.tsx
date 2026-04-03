@@ -6,10 +6,11 @@ import { toast } from '../../shared/components/Toast';
 import { useNotifications } from '../../store/NotificationContext';
 import { useDebounce } from '../../store/hooks';
 import { getApiErrorMessage } from '../../core/api/types';
+import { formatNumber as fmt } from '../../shared/utils';
+import { Button, Pagination, TabButton, TabBar } from '../../shared/components/Button';
+import { SearchInput, InputField, SelectField } from '../../shared/components/Input';
 
-function fmt(n: number | undefined | null): string {
-  return Number(n || 0).toLocaleString();
-}
+// fmt → imported from '../../shared/utils'
 
 interface AdminStats {
   totalUsers?: number;

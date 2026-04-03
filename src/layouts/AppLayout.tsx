@@ -9,6 +9,7 @@ import { useTheme } from '../store/ThemeContext';
 import { useNotifications } from '../store/NotificationContext';
 import { authApi } from '../core/api/authApi';
 import { toast } from '../shared/components/Toast';
+import { ROUTES } from '../routes';
 
 interface NavItem {
   to: string;
@@ -17,16 +18,16 @@ interface NavItem {
 }
 
 const userNav: NavItem[] = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/wallet', icon: Wallet, label: 'Wallet' },
-  { to: '/transfer', icon: Send, label: 'Send / Transfer' },
-  { to: '/rewards', icon: Gift, label: 'Rewards' },
-  { to: '/transactions', icon: Receipt, label: 'Transactions' },
-  { to: '/profile', icon: User, label: 'Profile / KYC' },
+  { to: ROUTES.DASHBOARD,    icon: LayoutDashboard, label: 'Dashboard' },
+  { to: ROUTES.WALLET,       icon: Wallet,          label: 'Wallet' },
+  { to: ROUTES.TRANSFER,     icon: Send,            label: 'Send / Transfer' },
+  { to: ROUTES.REWARDS,      icon: Gift,            label: 'Rewards' },
+  { to: ROUTES.TRANSACTIONS, icon: Receipt,         label: 'Transactions' },
+  { to: ROUTES.PROFILE,      icon: User,            label: 'Profile / KYC' },
 ];
 
 const adminNav: NavItem[] = [
-  { to: '/admin', icon: Shield, label: 'Admin Panel' },
+  { to: ROUTES.ADMIN, icon: Shield, label: 'Admin Panel' },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -52,7 +53,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       if (refreshToken) await authApi.logout({ refreshToken });
     } catch {}
     logout();
-    navigate('/login');
+    navigate(ROUTES.LOGIN);
     toast.success('Logged out successfully');
   };
 
