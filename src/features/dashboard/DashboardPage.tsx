@@ -61,7 +61,7 @@ export default function DashboardPage() {
   if (walletMissing) return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-bold">Good {greeting()}, {firstName} </h1>
+        <h1 className="text-2xl font-bold">Good {greeting()}, {firstName} 👋</h1>
         <p className="text-[var(--text-muted)] text-sm mt-1">Let's get your wallet set up.</p>
       </div>
       <NoWalletBanner kycStatus={kycStatus} variant="page" />
@@ -71,7 +71,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-bold">Good {greeting()}, {firstName} </h1>
+        <h1 className="text-2xl font-bold">Good {greeting()}, {firstName} 👋</h1>
         <p className="text-[var(--text-muted)] text-sm mt-1">Here's what's happening with your wallet today.</p>
       </div>
 

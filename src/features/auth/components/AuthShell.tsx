@@ -1,4 +1,4 @@
-import { Wallet, Zap, Gift, Shield, Sun, Moon } from 'lucide-react';
+import { Wallet, Zap, Gift, Shield } from 'lucide-react';
 import { Button } from '../../../shared/components/Button';
 import { useTheme } from '../../../store/ThemeContext';
 
@@ -70,7 +70,7 @@ export function AuthShell({ children, title, subtitle }: Props) {
           </div>
           <div className="ml-auto">
             <Button variant="ghost" size="sm" onClick={toggle} className="rounded-xl text-[var(--text-muted)]">
-              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              {isDark ? '☀️' : '🌙'}
             </Button>
           </div>
         </div>

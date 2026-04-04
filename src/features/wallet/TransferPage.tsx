@@ -152,7 +152,7 @@ export default function TransferPage() {
         amount={scratchAmount}
         onPointsEarned={(pts) => {
           toast.success(`+${pts} bonus points added to your rewards!`, 'Scratch Reward');
-          addNotification({ title: 'Scratch Card Reward', message: `You earned ${pts} bonus points!`, type: 'success' });
+          addNotification({ title: '🎁 Scratch Card Reward', message: `You earned ${pts} bonus points!`, type: 'success' });
         }}
       />
     </div>
