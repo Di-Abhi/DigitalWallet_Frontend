@@ -28,11 +28,11 @@ export function DashboardStats({ rewards, recentTx }: Props) {
 
   // Use user-aware getDirection so TRANSFER received shows as credit
   const credits = recentTx
-    .filter((t) => getDirection(t.type, currentUserId, t.senderId) === 'received')
+    .filter((t) => getDirection(t.type, currentUserId, t.senderUserId) === 'received')
     .reduce((s, t) => s + t.amount, 0);
 
   const debits = recentTx
-    .filter((t) => getDirection(t.type, currentUserId, t.senderId) === 'sent')
+    .filter((t) => getDirection(t.type, currentUserId, t.senderUserId) === 'sent')
     .reduce((s, t) => s + t.amount, 0);
 
   return (

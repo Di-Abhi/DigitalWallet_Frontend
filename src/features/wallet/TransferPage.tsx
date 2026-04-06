@@ -9,7 +9,7 @@ import NoWalletBanner from '../../shared/components/NoWalletBanner';
 import { ScratchCardModal } from '../../shared/components/ScratchCard';
 import { Button } from '../../shared/components/Button';
 import { InputField, AmountInput } from '../../shared/components/Input';
-import { walletApi } from '../../core/api/walletApi';
+import {walletApi} from '../../core/api/walletApi'
 
 type KycStatus = 'NOT_SUBMITTED' | 'PENDING' | 'REJECTED' | 'APPROVED' | null;
 

@@ -2,7 +2,9 @@ import { Link } from 'react-router-dom';
 import {
   Wallet, Shield, Zap, Gift, ArrowRight, Star, CheckCircle,
   Send, TrendingUp, Lock, Smartphone, Globe, ExternalLink,
-  Mail, Phone, ChevronRight, Award, Users, CreditCard, Share2
+  Mail, Phone, ChevronRight, Award, Users, CreditCard, Share2,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { useTheme } from '../../store/ThemeContext';
 import { ROUTES } from '../../routes';
@@ -35,7 +37,7 @@ function LandingNavbar() {
 
           <div className="flex items-center gap-3">
             <button onClick={toggle} className="btn-ghost p-2 rounded-xl text-sm">
-              {isDark ? '☀️' : '🌙'}
+              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
             <Link to={ROUTES.LOGIN} className="btn-secondary text-sm px-4 py-2 hidden sm:flex">Sign in</Link>
             <Link to={ROUTES.SIGNUP} className="btn-primary text-sm px-4 py-2">Get Started</Link>

@@ -11,10 +11,10 @@ interface Props {
 
 export function TransactionSummary({ transactions, currentUserId, activeTab, onTabChange }: Props) {
   const received = transactions.filter(
-    (t) => getDirection(t.type, currentUserId, t.senderId) === 'received',
+    (t) => getDirection(t.type, currentUserId, t.senderUserId) === 'received',
   );
   const sent = transactions.filter(
-    (t) => getDirection(t.type, currentUserId, t.senderId) === 'sent',
+    (t) => getDirection(t.type, currentUserId, t.senderUserId) === 'sent',
   );
 
   const totalIn  = received.reduce((s, t) => s + t.amount, 0);

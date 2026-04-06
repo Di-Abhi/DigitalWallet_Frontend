@@ -7,7 +7,7 @@ import { getDirection, type Transaction } from '../types';
 
 // ─── Shared helper: resolve direction for a single row ────────────────────────
 function resolveDirection(tx: Transaction, currentUserId?: number | null) {
-  return getDirection(tx.type, currentUserId, tx.senderId);
+  return getDirection(tx.type, currentUserId, tx.senderUserId);
 }
 
 // ─── DirectionIcon ────────────────────────────────────────────────────────────
@@ -100,11 +100,11 @@ export function TransactionTableRow({
     <tr className="border-b border-[var(--border)] hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
       <td className="p-4">
         <div className="flex items-center gap-3">
-          <DirectionIcon type={tx.type} currentUserId={currentUserId} senderUserId={tx.senderId} size="sm" />
+          <DirectionIcon type={tx.type} currentUserId={currentUserId} senderUserId={tx.senderUserId} size="sm" />
           <div>
             <div className="flex items-center gap-1.5">
               <span className="font-semibold text-sm">#{tx.id}</span>
-              <DirectionBadge type={tx.type} currentUserId={currentUserId} senderUserId={tx.senderId} />
+              <DirectionBadge type={tx.type} currentUserId={currentUserId} senderUserId={tx.senderUserId} />
             </div>
             <div className="text-xs text-[var(--text-muted)] truncate max-w-36">
               {tx.description || tx.referenceId || '—'}
@@ -114,7 +114,7 @@ export function TransactionTableRow({
       </td>
       <td className="p-4"><StatusBadge status={tx.type} /></td>
       <td className="p-4 text-right">
-        <AmountLabel type={tx.type} amount={tx.amount} currentUserId={currentUserId} senderUserId={tx.senderId} />
+        <AmountLabel type={tx.type} amount={tx.amount} currentUserId={currentUserId} senderUserId={tx.senderUserId} />
       </td>
       <td className="p-4 text-center"><StatusBadge status={tx.status} /></td>
       <td className="p-4 text-xs text-[var(--text-muted)]">{fmtDate(tx.createdAt)}</td>
@@ -141,15 +141,15 @@ export function TransactionCard({
   return (
     <div className="p-4">
       <div className="flex items-center gap-3 mb-2">
-        <DirectionIcon type={tx.type} currentUserId={currentUserId} senderUserId={tx.senderId} />
+        <DirectionIcon type={tx.type} currentUserId={currentUserId} senderUserId={tx.senderUserId} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="font-semibold text-sm">#{tx.id} · {tx.type}</span>
-            <DirectionBadge type={tx.type} currentUserId={currentUserId} senderUserId={tx.senderId} />
+            <DirectionBadge type={tx.type} currentUserId={currentUserId} senderUserId={tx.senderUserId} />
           </div>
           <div className="text-xs text-[var(--text-muted)]">{fmtDate(tx.createdAt)}</div>
         </div>
-        <AmountLabel type={tx.type} amount={tx.amount} currentUserId={currentUserId} senderUserId={tx.senderId} className="text-sm" />
+        <AmountLabel type={tx.type} amount={tx.amount} currentUserId={currentUserId} senderUserId={tx.senderUserId} className="text-sm" />
       </div>
       <div className="flex gap-2 mt-1.5">
         <StatusBadge status={tx.status} />

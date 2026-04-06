@@ -23,7 +23,7 @@ function EmptyTransactions() {
 function TransactionItem({ tx, currentUserId }: { tx: Transaction; currentUserId: number | null }) {
   return (
     <div className="flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-      <DirectionIcon type={tx.type} currentUserId={currentUserId} senderUserId={tx.senderId} />
+      <DirectionIcon type={tx.type} currentUserId={currentUserId} senderUserId={tx.senderUserId} />
       <div className="flex-1 min-w-0">
         <div className="font-semibold text-sm">{tx.type}</div>
         <div className="text-xs text-[var(--text-muted)] truncate">
@@ -33,7 +33,7 @@ function TransactionItem({ tx, currentUserId }: { tx: Transaction; currentUserId
       <div className="text-right shrink-0">
         <AmountLabel
           type={tx.type} amount={tx.amount}
-          currentUserId={currentUserId} senderUserId={tx.senderId}
+          currentUserId={currentUserId} senderUserId={tx.senderUserId}
           className="text-sm"
         />
         <div className="text-xs text-[var(--text-muted)] mt-0.5">{formatDate(tx.createdAt)}</div>
@@ -49,10 +49,10 @@ export function RecentTransactions({ transactions }: Props) {
   const [tab, setTab]   = useState<DirectionTab>('all');
 
   const received = transactions.filter(
-    (t) => getDirection(t.type, currentUserId, t.senderId) === 'received',
+    (t) => getDirection(t.type, currentUserId, t.senderUserId) === 'received',
   );
   const sent = transactions.filter(
-    (t) => getDirection(t.type, currentUserId, t.senderId) === 'sent',
+    (t) => getDirection(t.type, currentUserId, t.senderUserId) === 'sent',
   );
   const visible = tab === 'all' ? transactions : tab === 'received' ? received : sent;
 
