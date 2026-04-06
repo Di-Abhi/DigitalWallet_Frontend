@@ -57,7 +57,7 @@ export default function TransactionsPage() {
     // 1. Direction filter — uses current user ID to resolve TRANSFER direction
     if (directionTab !== 'all') {
       data = data.filter(
-        (t) => getDirection(t.type, currentUserId, t.senderUserId) === directionTab,
+        (t) => getDirection(t.type, currentUserId, t.senderId) === directionTab,
       );
     }
 
@@ -93,7 +93,7 @@ export default function TransactionsPage() {
       ['ID', 'Direction', 'Type', 'Amount', 'Status', 'Description', 'Date'],
       filteredTxns.map((t) => [
         t.id,
-        getDirection(t.type, currentUserId, t.senderUserId).toUpperCase(),
+        getDirection(t.type, currentUserId, t.senderId).toUpperCase(),
         t.type,
         t.amount,
         t.status,

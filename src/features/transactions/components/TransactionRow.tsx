@@ -7,22 +7,22 @@ import { getDirection, type Transaction } from '../types';
 
 // ─── Shared helper: resolve direction for a single row ────────────────────────
 function resolveDirection(tx: Transaction, currentUserId?: number | null) {
-  return getDirection(tx.type, currentUserId, tx.senderUserId);
+  return getDirection(tx.type, currentUserId, tx.senderId);
 }
 
 // ─── DirectionIcon ────────────────────────────────────────────────────────────
 export function DirectionIcon({
   type,
   currentUserId,
-  senderUserId,
+  senderId,
   size = 'md',
 }: {
   type:           string;
   currentUserId?: number | null;
-  senderUserId?:  number | null;
+  senderId?:  number | null;
   size?:          'sm' | 'md';
 }) {
-  const isReceived = getDirection(type, currentUserId, senderUserId) === 'received';
+  const isReceived = getDirection(type, currentUserId, senderId) === 'received';
   const dim = size === 'sm' ? 'w-8 h-8' : 'w-9 h-9';
   const iconSize = size === 'sm' ? 'w-3.5 h-3.5' : 'w-4 h-4';
 
@@ -47,16 +47,16 @@ export function AmountLabel({
   type,
   amount,
   currentUserId,
-  senderUserId,
+  senderId,
   className = '',
 }: {
   type:           string;
   amount:         number;
   currentUserId?: number | null;
-  senderUserId?:  number | null;
+  senderId?:  number | null;
   className?:     string;
 }) {
-  const isReceived = getDirection(type, currentUserId, senderUserId) === 'received';
+  const isReceived = getDirection(type, currentUserId, senderId) === 'received';
   return (
     <span className={`amount font-bold ${isReceived ? 'text-emerald-600' : 'text-red-500'} ${className}`}>
       {isReceived ? '+' : '−'}{fmt(amount)}
@@ -69,14 +69,14 @@ export function AmountLabel({
 export function DirectionBadge({
   type,
   currentUserId,
-  senderUserId,
+  senderId,
 }: {
   type:           string;
   currentUserId?: number | null;
-  senderUserId?:  number | null;
+  senderId?:  number | null;
 }) {
   if (type !== 'TRANSFER') return null; // only ambiguous for transfers
-  const isReceived = getDirection(type, currentUserId, senderUserId) === 'received';
+  const isReceived = getDirection(type, currentUserId, senderId) === 'received';
   return (
     <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full ${
       isReceived
@@ -100,11 +100,11 @@ export function TransactionTableRow({
     <tr className="border-b border-[var(--border)] hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
       <td className="p-4">
         <div className="flex items-center gap-3">
-          <DirectionIcon type={tx.type} currentUserId={currentUserId} senderUserId={tx.senderUserId} size="sm" />
+          <DirectionIcon type={tx.type} currentUserId={currentUserId} senderId={tx.senderId} size="sm" />
           <div>
             <div className="flex items-center gap-1.5">
               <span className="font-semibold text-sm">#{tx.id}</span>
-              <DirectionBadge type={tx.type} currentUserId={currentUserId} senderUserId={tx.senderUserId} />
+              <DirectionBadge type={tx.type} currentUserId={currentUserId} senderId={tx.senderId} />
             </div>
             <div className="text-xs text-[var(--text-muted)] truncate max-w-36">
               {tx.description || tx.referenceId || '—'}
@@ -114,7 +114,7 @@ export function TransactionTableRow({
       </td>
       <td className="p-4"><StatusBadge status={tx.type} /></td>
       <td className="p-4 text-right">
-        <AmountLabel type={tx.type} amount={tx.amount} currentUserId={currentUserId} senderUserId={tx.senderUserId} />
+        <AmountLabel type={tx.type} amount={tx.amount} currentUserId={currentUserId} senderId={tx.senderId} />
       </td>
       <td className="p-4 text-center"><StatusBadge status={tx.status} /></td>
       <td className="p-4 text-xs text-[var(--text-muted)]">{fmtDate(tx.createdAt)}</td>
@@ -141,15 +141,15 @@ export function TransactionCard({
   return (
     <div className="p-4">
       <div className="flex items-center gap-3 mb-2">
-        <DirectionIcon type={tx.type} currentUserId={currentUserId} senderUserId={tx.senderUserId} />
+        <DirectionIcon type={tx.type} currentUserId={currentUserId} senderId={tx.senderId} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="font-semibold text-sm">#{tx.id} · {tx.type}</span>
-            <DirectionBadge type={tx.type} currentUserId={currentUserId} senderUserId={tx.senderUserId} />
+            <DirectionBadge type={tx.type} currentUserId={currentUserId} senderId={tx.senderId} />
           </div>
           <div className="text-xs text-[var(--text-muted)]">{fmtDate(tx.createdAt)}</div>
         </div>
-        <AmountLabel type={tx.type} amount={tx.amount} currentUserId={currentUserId} senderUserId={tx.senderUserId} className="text-sm" />
+        <AmountLabel type={tx.type} amount={tx.amount} currentUserId={currentUserId} senderId={tx.senderId} className="text-sm" />
       </div>
       <div className="flex gap-2 mt-1.5">
         <StatusBadge status={tx.status} />

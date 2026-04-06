@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Mail, CheckCircle } from 'lucide-react';
 import { authApi } from '../../../core/api/authApi';
 import { toast } from '../../../shared/components/Toast';
@@ -14,58 +14,79 @@ interface Props {
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function OtpLoginForm({ onSuccess }: Props) {
-  const [step, setStep]   = useState<Step>('email');
-  const [email, setEmail] = useState('');
+  const [step, setStep]         = useState<Step>('email');
+  const [email, setEmail]       = useState('');
   const [emailErr, setEmailErr] = useState('');
-  const [otp, setOtp]     = useState('');
+  const [otp, setOtp]           = useState('');
   const [loading, setLoading]   = useState(false);
-  const [expiryMins, setExpiryMins]   = useState(5);
-  const [cooldown, setCooldown]       = useState(0);
+  const [expiryMins, setExpiryMins] = useState(5);
+  const [cooldown, setCooldown]     = useState(0);
 
-  // ── Resend cooldown timer ─────────────────────────────────────────────────
+  // Keep a ref to the interval so we can clear it on unmount or re-send
+  const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Clean up interval when component unmounts
+  useEffect(() => {
+    return () => {
+      if (cooldownRef.current) clearInterval(cooldownRef.current);
+    };
+  }, []);
+
   const startCooldown = (secs = 30) => {
+    // Clear any existing interval before starting a new one
+    if (cooldownRef.current) clearInterval(cooldownRef.current);
     setCooldown(secs);
-    const t = setInterval(() => {
-      setCooldown((p) => {
-        if (p <= 1) { clearInterval(t); return 0; }
-        return p - 1;
+    cooldownRef.current = setInterval(() => {
+      setCooldown((prev) => {
+        if (prev <= 1) {
+          clearInterval(cooldownRef.current!);
+          cooldownRef.current = null;
+          return 0;
+        }
+        return prev - 1;
       });
     }, 1000);
   };
 
-  // ── Step 1: send OTP via POST /api/auth/send-otp ─────────────────────────
+  // ── Step 1: send OTP ──────────────────────────────────────────────────────
   const sendOtp = async () => {
-    if (!email)               { setEmailErr('Email is required'); return; }
-    if (!EMAIL_RE.test(email)){ setEmailErr('Enter a valid email address'); return; }
+    if (!email)                { setEmailErr('Email is required'); return; }
+    if (!EMAIL_RE.test(email)) { setEmailErr('Enter a valid email address'); return; }
     setEmailErr('');
     setLoading(true);
     try {
-      // Uses the real working endpoint confirmed by Swagger
       const res = await authApi.sendOtp({ email });
       const mins = res.data?.expiryMinutes ?? 5;
       setExpiryMins(mins);
-      toast.success('OTP sent! Check your inbox.');
       setStep('otp');
       startCooldown(30);
+      toast.success('OTP sent! Check your inbox.');
     } catch (e: any) {
-      toast.error(e.response?.data?.message || 'Failed to send OTP. Please try again.');
+      const msg = e.response?.data?.message || e.message || 'Failed to send OTP. Please try again.';
+      toast.error(msg);
     } finally { setLoading(false); }
   };
 
-  // ── Step 2: verify OTP via POST /api/auth/verify-otp → returns tokens ────
+  // ── Step 2: verify OTP ────────────────────────────────────────────────────
   const verifyOtp = async () => {
-    if (otp.length < 6) {
-      toast.error('Enter the complete 6-digit OTP');
-      return;
-    }
+    if (otp.length < 6) { toast.error('Enter the complete 6-digit OTP'); return; }
     setLoading(true);
     try {
-      // Same endpoint used by SignupPage — returns { accessToken, refreshToken, user }
       const res = await authApi.verifyOtp({ email, otp });
       const { accessToken, refreshToken, user } = res.data;
       onSuccess({ accessToken, refreshToken, user });
     } catch (e: any) {
-      toast.error(e.response?.data?.message || 'Invalid or expired OTP. Try again.');
+      // Handle both 4xx (wrong OTP) and 5xx (backend Redis issue) gracefully
+      const status = e.response?.status;
+      const msg    = e.response?.data?.message;
+
+      if (status === 400 || status === 401) {
+        toast.error(msg || 'Invalid OTP. Please check and try again.');
+      } else if (status >= 500 || !e.response) {
+        toast.error('Server error. Please request a new OTP and try again.');
+      } else {
+        toast.error(msg || 'OTP verification failed. Try again.');
+      }
       setOtp('');
     } finally { setLoading(false); }
   };
@@ -78,11 +99,19 @@ export function OtpLoginForm({ onSuccess }: Props) {
       const res = await authApi.sendOtp({ email });
       setExpiryMins(res.data?.expiryMinutes ?? 5);
       setOtp('');
-      toast.success('OTP resent! Check your inbox.');
       startCooldown(30);
+      toast.success('New OTP sent! Check your inbox.');
     } catch (e: any) {
-      toast.error(e.response?.data?.message || 'Failed to resend OTP.');
+      toast.error(e.response?.data?.message || 'Failed to resend OTP. Try again.');
     } finally { setLoading(false); }
+  };
+
+  // ── Go back to email step ─────────────────────────────────────────────────
+  const goBack = () => {
+    setStep('email');
+    setOtp('');
+    if (cooldownRef.current) { clearInterval(cooldownRef.current); cooldownRef.current = null; }
+    setCooldown(0);
   };
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -103,7 +132,6 @@ export function OtpLoginForm({ onSuccess }: Props) {
           onKeyDown={(e) => e.key === 'Enter' && sendOtp()}
         />
 
-        {/* Hint */}
         <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-cyan-50 dark:bg-cyan-950/30 border border-cyan-200 dark:border-cyan-800">
           <Mail className="w-4 h-4 text-cyan-500 shrink-0 mt-0.5" aria-hidden="true" />
           <p className="text-xs text-cyan-700 dark:text-cyan-400">
@@ -152,7 +180,7 @@ export function OtpLoginForm({ onSuccess }: Props) {
         <OtpInput value={otp} onChange={setOtp} />
       </div>
 
-      {/* Verify */}
+      {/* Verify button */}
       <Button
         fullWidth
         size="lg"
@@ -170,7 +198,7 @@ export function OtpLoginForm({ onSuccess }: Props) {
         <button
           type="button"
           className="text-xs text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
-          onClick={() => { setStep('email'); setOtp(''); }}
+          onClick={goBack}
         >
           ← Change email
         </button>
@@ -189,7 +217,7 @@ export function OtpLoginForm({ onSuccess }: Props) {
         </button>
       </div>
 
-      {/* Expiry */}
+      {/* Expiry notice */}
       <p className="text-center text-xs text-[var(--text-muted)]">
         OTP expires in <span className="font-semibold">{expiryMins} minutes</span>
       </p>

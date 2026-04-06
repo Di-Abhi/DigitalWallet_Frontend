@@ -1,6 +1,6 @@
 // ─── Transaction shape from /api/wallet/transactions ─────────────────────────
 // The backend returns `type: 'TRANSFER'` for BOTH sender and receiver.
-// To show the correct direction, we use `senderUserId` compared to the
+// To show the correct direction, we use `senderId` compared to the
 // currently logged-in user's ID.
 export interface Transaction {
   id: number;
@@ -11,7 +11,7 @@ export interface Transaction {
   referenceId?: string;
   createdAt?: string;
   // Present on TRANSFER transactions — identifies who sent and who received
-  senderUserId?:   number | null;
+  senderId?:   number | null;
   receiverUserId?: number | null;
 }
 
@@ -27,7 +27,7 @@ export const ALWAYS_SENT     = ['WITHDRAW', 'REDEEM'] as const;
  * Rules:
  * - TOPUP, CASHBACK  → always "received"  (money comes into wallet)
  * - WITHDRAW, REDEEM → always "sent"      (money leaves wallet)
- * - TRANSFER         → check senderUserId vs currentUserId
+ * - TRANSFER         → check senderId vs currentUserId
  *                      • if I am the sender   → "sent"
  *                      • if I am the receiver → "received"
  *                      • if unknown (null)    → fall back to "sent" (safe default)
@@ -35,15 +35,15 @@ export const ALWAYS_SENT     = ['WITHDRAW', 'REDEEM'] as const;
 export function getDirection(
   type: string,
   currentUserId?: number | null,
-  senderUserId?: number | null,
+  senderId?: number | null,
 ): 'received' | 'sent' {
   if ((ALWAYS_RECEIVED as readonly string[]).includes(type)) return 'received';
   if ((ALWAYS_SENT     as readonly string[]).includes(type)) return 'sent';
 
   // TRANSFER: compare IDs
   if (type === 'TRANSFER') {
-    if (currentUserId != null && senderUserId != null) {
-      return currentUserId === senderUserId ? 'sent' : 'received';
+    if (currentUserId != null && senderId != null) {
+      return currentUserId === senderId ? 'sent' : 'received';
     }
     // Fallback: description often says "Transfer from …" vs "Transfer to …"
     // This is a best-effort heuristic when IDs are not present

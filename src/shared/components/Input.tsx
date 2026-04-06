@@ -117,6 +117,12 @@ export const AmountInput = memo(function AmountInput({ label, error, currency = 
 
 // ─── OtpInput ─────────────────────────────────────────────────────────────────
 export function OtpInput({ value, onChange, length = 6 }: { value: string; onChange: (v: string) => void; length?: number; }) {
+  // Focus a specific box by index
+  const focusBox = (parent: HTMLElement, index: number) => {
+    const box = parent.querySelectorAll<HTMLInputElement>('input')[index];
+    box?.focus();
+  };
+
   return (
     <div className="flex gap-2 justify-center" role="group" aria-label="OTP input">
       {Array.from({ length }).map((_, i) => (
@@ -132,11 +138,30 @@ export function OtpInput({ value, onChange, length = 6 }: { value: string; onCha
             const arr = value.split('');
             arr[i] = char;
             onChange(arr.join('').slice(0, length));
-            if (char && e.target.nextElementSibling) (e.target.nextElementSibling as HTMLInputElement).focus();
+            if (char && e.target.nextElementSibling)
+              (e.target.nextElementSibling as HTMLInputElement).focus();
           }}
           onKeyDown={(e) => {
             if (e.key === 'Backspace' && !value[i] && e.currentTarget.previousElementSibling)
               (e.currentTarget.previousElementSibling as HTMLInputElement).focus();
+            // Allow arrow key navigation between boxes
+            if (e.key === 'ArrowLeft' && e.currentTarget.previousElementSibling)
+              (e.currentTarget.previousElementSibling as HTMLInputElement).focus();
+            if (e.key === 'ArrowRight' && e.currentTarget.nextElementSibling)
+              (e.currentTarget.nextElementSibling as HTMLInputElement).focus();
+          }}
+          onPaste={(e) => {
+            // Handle paste: extract digits, fill all boxes from current position
+            e.preventDefault();
+            const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, length);
+            if (!pasted) return;
+            const arr = value.split('');
+            pasted.split('').forEach((ch, idx) => { arr[i + idx] = ch; });
+            const next = arr.join('').slice(0, length);
+            onChange(next);
+            // Focus the box after the last pasted digit
+            const lastFilled = Math.min(i + pasted.length, length - 1);
+            focusBox(e.currentTarget.parentElement!, lastFilled);
           }}
           className="w-11 h-12 text-center text-lg font-bold bg-slate-50 dark:bg-slate-800/80 border border-[var(--border)] rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all"
         />

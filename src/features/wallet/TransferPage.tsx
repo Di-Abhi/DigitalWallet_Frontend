@@ -1,4 +1,4 @@
-import { getApiErrorMessage, isWalletNotFound } from '../../core/api/types';
+import { getApiErrorMessage, isReceiverNotFound, isWalletNotFound } from '../../core/api/types';
 import { formatCurrency as fmt } from '../../shared/utils';
 import { useState, ChangeEvent, FormEvent } from 'react';
 import { Send, User, Info, CheckCircle } from 'lucide-react';
@@ -9,52 +9,95 @@ import NoWalletBanner from '../../shared/components/NoWalletBanner';
 import { ScratchCardModal } from '../../shared/components/ScratchCard';
 import { Button } from '../../shared/components/Button';
 import { InputField, AmountInput } from '../../shared/components/Input';
-import {walletApi} from '../../core/api/walletApi'
+import { walletApi } from '../../core/api/walletApi'
 
 type KycStatus = 'NOT_SUBMITTED' | 'PENDING' | 'REJECTED' | 'APPROVED' | null;
 
-interface TransferForm   { receiverId: string; amount: string; description: string; }
-interface TransferSuccess { amount: string; receiverId: string; }
+interface TransferForm { receiverPhone: string; amount: string; description: string; }
+interface TransferSuccess { amount: string; receiverPhone: string; }
 
 export default function TransferPage() {
   const { addNotification } = useNotifications();
-  const [form, setForm]         = useState<TransferForm>({ receiverId: '', amount: '', description: '' });
-  const [loading, setLoading]   = useState(false);
-  const [success, setSuccess]   = useState<TransferSuccess | null>(null);
+  const [form, setForm] = useState<TransferForm>({ receiverPhone: '', amount: '', description: '' });
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState<TransferSuccess | null>(null);
   const [walletMissing, setWalletMissing] = useState(false);
-  const [kycStatus, setKycStatus]         = useState<KycStatus>(null);
-  const [scratchModal, setScratchModal]   = useState(false);
+  const [kycStatus, setKycStatus] = useState<KycStatus>(null);
+  const [scratchModal, setScratchModal] = useState(false);
   const [scratchAmount, setScratchAmount] = useState(0);
 
   const set = (e: ChangeEvent<HTMLInputElement>) => setForm({ ...form, [e.target.name]: e.target.value });
 
+  const checkKycAndWallet = async () => {
+    try {
+      const res = await userApi.kycStatus();
+      const status = res?.data?.data?.status;
+
+      if (status !== 'APPROVED') {
+        setKycStatus(status);
+        toast.error('Complete KYC to make transfers');
+        return false;
+      }
+
+      return true;
+    } catch {
+      toast.error('Unable to verify KYC status');
+      return false;
+    }
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!form.receiverId || !form.amount) return toast.error('Fill in all required fields');
-    if (Number(form.amount) < 1 || Number(form.amount) > 25000) return toast.error('Amount must be ₹1–₹25,000');
+
+    if (!form.receiverPhone || !form.amount) {
+      return toast.error('Fill in all required fields');
+    }
+
+    if (Number(form.amount) < 1 || Number(form.amount) > 25000) {
+      return toast.error('Amount must be ₹1–₹25,000');
+    }
+    const isKycValid = await checkKycAndWallet();
+    if (!isKycValid) return;
+
     setLoading(true);
+
     try {
       await walletApi.transfer({
-        receiverId: Number(form.receiverId),
+        receiverPhone: Number(form.receiverPhone),
         amount: Number(form.amount),
         description: form.description,
-        idempotencyKey: `txn_${Date.now()}_${form.receiverId}`,
+        idempotencyKey: `txn_${Date.now()}_${form.receiverPhone}`,
       });
-      setSuccess({ amount: form.amount, receiverId: form.receiverId });
-      addNotification({ title: 'Transfer Successful', message: `₹${form.amount} sent to User #${form.receiverId}`, type: 'success' });
+      setSuccess({ amount: form.amount, receiverPhone: form.receiverPhone });
+      addNotification({
+        title: 'Transfer Successful',
+        message: `₹${form.amount} sent to User #${form.receiverPhone}`,
+        type: 'success'
+      });
       toast.success(`Transfer of ${fmt(form.amount)} successful!`);
+
       setScratchAmount(Number(form.amount));
-      setForm({ receiverId: '', amount: '', description: '' });
+      setForm({ receiverPhone: '', amount: '', description: '' });
+
       setTimeout(() => setScratchModal(true), 600);
+
     } catch (err) {
-      if (isWalletNotFound(err)) {
+
+      if (isReceiverNotFound(err)) {
+        toast.error('Receiver not registered on platform');
+      }
+      else if (isWalletNotFound(err)) {
         const kycRes = await userApi.kycStatus().catch(() => null);
         setKycStatus(kycRes?.data?.data?.status ?? null);
         setWalletMissing(true);
-      } else {
+      }
+      else {
         toast.error(getApiErrorMessage(err, 'Transfer failed'));
       }
-    } finally { setLoading(false); }
+
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -70,7 +113,7 @@ export default function TransferPage() {
             <div>
               <div className="font-bold text-emerald-700 dark:text-emerald-400">Transfer Successful!</div>
               <div className="text-sm text-emerald-600 dark:text-emerald-500">
-                {fmt(success.amount)} sent to User #{success.receiverId}
+                {fmt(success.amount)} sent to User #{success.receiverPhone}
               </div>
             </div>
           </div>
@@ -79,15 +122,15 @@ export default function TransferPage() {
 
       <form onSubmit={handleSubmit} className="card p-6 space-y-5">
         <InputField
-          label="Recipient User ID *"
-          name="receiverId"
-          type="number"
-          placeholder="Enter recipient's user ID"
+          label="Recipient Phone Number *"
+          name="receiverPhone"
+          type="string"
+          placeholder="Enter recipient's phone number"
           icon={User}
-          value={form.receiverId}
+          value={form.receiverPhone}
           onChange={set}
           required
-          hint="Ask the recipient for their User ID"
+          hint="Ask the recipient for their Phone number"
         />
 
         <AmountInput

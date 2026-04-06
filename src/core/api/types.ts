@@ -32,3 +32,17 @@ export function isWalletNotFound(err: unknown): boolean {
     msg.includes('wallet inactive')
   );
 }
+
+export function isReceiverNotFound(err: unknown): boolean {
+  const e = err as ApiError;
+  const status = e?.response?.status;
+  const msg = (e?.response?.data?.message || '').toLowerCase();
+
+  return (
+    status === 404 ||
+    msg.includes('user not found') ||
+    msg.includes('receiver not found') ||
+    msg.includes('phone not registered') ||
+    msg.includes('invalid receiver')
+  );
+}
