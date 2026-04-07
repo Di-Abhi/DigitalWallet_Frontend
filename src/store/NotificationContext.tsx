@@ -29,7 +29,10 @@ export function useNotifications() {
     [dispatch]
   );
 
-  const markAllRead = useCallback(() => { dispatch(markAllReadAction()); }, [dispatch]);
+  const markAllRead = useCallback(() => {
+  dispatch(markAllReadAction());
+  dispatch(clearAllAction());
+}, [dispatch]);
 
   const clearAll = useCallback(() => { dispatch(clearAllAction()); }, [dispatch]);
 

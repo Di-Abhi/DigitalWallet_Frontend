@@ -1,180 +1,340 @@
-import { getApiErrorMessage, isReceiverNotFound, isWalletNotFound } from '../../core/api/types';
-import { formatCurrency as fmt } from '../../shared/utils';
-import { useState, ChangeEvent, FormEvent } from 'react';
-import { Send, Phone, Info, CheckCircle } from 'lucide-react';
-import { userApi } from '../../core/api/userApi';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Send, Search, User, CheckCircle, XCircle,
+  ArrowLeft, AlertCircle, Loader2, ChevronRight,
+} from 'lucide-react';
 import { walletApi } from '../../core/api/walletApi';
+import { getApiErrorMessage } from '../../core/api/types';
 import { toast } from '../../shared/components/Toast';
-import { useNotifications } from '../../store/NotificationContext';
-import NoWalletBanner from '../../shared/components/NoWalletBanner';
-import { ScratchCardModal } from '../../shared/components/ScratchCard';
-import { Button } from '../../shared/components/Button';
-import { InputField, AmountInput } from '../../shared/components/Input';
 
-type KycStatus = 'NOT_SUBMITTED' | 'PENDING' | 'REJECTED' | 'APPROVED' | null;
+// ─── Types ────────────────────────────────────────────────────────────────────
+interface ReceiverSuggestion {
+  userId: number;
+  name: string;
+  email: string;
+  phone: string;
+}
 
-interface TransferForm   { receiverPhone: string; amount: string; description: string; }
-interface TransferSuccess { amount: string; receiverPhone: string; }
+type Step = 'lookup' | 'confirm' | 'success';
 
-// Phone number validation: 10-15 digits
-const PHONE_RE = /^[0-9]{10,15}$/;
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const fmt = (n: number) =>
+  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(n);
 
-export default function TransferPage() {
-  const { addNotification } = useNotifications();
-  const [form, setForm]     = useState<TransferForm>({ receiverPhone: '', amount: '', description: '' });
-  const [errors, setErrors] = useState<Partial<TransferForm>>({});
-  const [loading, setLoading]   = useState(false);
-  const [success, setSuccess]   = useState<TransferSuccess | null>(null);
-  const [walletMissing, setWalletMissing] = useState(false);
-  const [kycStatus, setKycStatus]         = useState<KycStatus>(null);
-  const [scratchModal, setScratchModal]   = useState(false);
-  const [scratchAmount, setScratchAmount] = useState(0);
+const DEBOUNCE_MS = 600;
 
-  const set = (e: ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-    setErrors({ ...errors, [e.target.name]: undefined });
-  };
+function useDebounce<T>(value: T, delay: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
 
-  const validate = (): boolean => {
-    const newErrors: Partial<TransferForm> = {};
-    if (!form.receiverPhone)               newErrors.receiverPhone = 'Phone number is required';
-    else if (!PHONE_RE.test(form.receiverPhone)) newErrors.receiverPhone = 'Enter a valid 10–15 digit phone number';
-    if (!form.amount)                      newErrors.amount = 'Amount is required';
-    else if (Number(form.amount) < 1)      newErrors.amount = 'Minimum transfer is ₹1';
-    else if (Number(form.amount) > 25000)  newErrors.amount = 'Maximum transfer is ₹25,000';
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+// ─── Receiver Card ────────────────────────────────────────────────────────────
+function ReceiverCard({ receiver }: { receiver: ReceiverSuggestion }) {
+  const initials = receiver.name
+    .split(' ')
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!validate()) return;
+  return (
+    <div className="flex items-center gap-4 p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border)] animate-fade-in">
+      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-500 to-cyan-700 flex items-center justify-center text-white font-bold text-lg shrink-0">
+        {initials}
+      </div>
+      <div className="min-w-0">
+        <p className="font-semibold text-[var(--text-primary)] truncate">{receiver.name}</p>
+        {receiver.email && (
+          <p className="text-xs text-[var(--text-muted)] truncate">{receiver.email}</p>
+        )}
+        {receiver.phone && (
+          <p className="text-xs text-[var(--text-muted)] truncate">{receiver.phone}</p>
+        )}
+      </div>
+      <CheckCircle className="w-5 h-5 text-emerald-500 shrink-0 ml-auto" />
+    </div>
+  );
+}
 
+// ─── Step 1: Lookup ───────────────────────────────────────────────────────────
+interface LookupStepProps {
+  onReceiverFound: (receiver: ReceiverSuggestion) => void;
+}
+
+function LookupStep({ onReceiverFound }: LookupStepProps) {
+  const [identifier, setIdentifier] = useState('');
+  const [receiver, setReceiver]     = useState<ReceiverSuggestion | null>(null);
+  const [loading, setLoading]       = useState(false);
+  const [error, setError]           = useState<string | null>(null);
+  const [amount, setAmount]         = useState('');
+  const [description, setDescription] = useState('');
+  const [sending, setSending]       = useState(false);
+
+  const debouncedIdentifier = useDebounce(identifier.trim(), DEBOUNCE_MS);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-focus on mount
+  useEffect(() => { inputRef.current?.focus(); }, []);
+
+  // Lookup receiver whenever identifier changes (debounced)
+  useEffect(() => {
+    if (!debouncedIdentifier || debouncedIdentifier.length < 3) {
+      setReceiver(null);
+      setError(null);
+      return;
+    }
+
+    let cancelled = false;
     setLoading(true);
+    setError(null);
+    setReceiver(null);
+
+    walletApi
+      .receiverSuggestion(debouncedIdentifier)
+      .then((res) => {
+        if (!cancelled) {
+          const data = res.data?.data;
+          if (data?.userId) setReceiver(data);
+          else setError('No account found for this identifier.');
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          const msg = getApiErrorMessage(err, '');
+          setError(msg || 'No account found for this identifier.');
+        }
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
+
+    return () => { cancelled = true; };
+  }, [debouncedIdentifier]);
+
+  const handleSend = async () => {
+    if (!receiver) return;
+    const amt = parseFloat(amount);
+    if (!amt || amt < 1) { toast.error('Enter a valid amount (min ₹1)'); return; }
+    if (amt > 25000)     { toast.error('Maximum transfer is ₹25,000'); return; }
+
+    setSending(true);
     try {
+      const idempotencyKey = `${receiver.userId}-${Date.now()}`;
       await walletApi.transfer({
-        receiverPhone: form.receiverPhone,
-        amount: Number(form.amount),
-        description: form.description,
-        idempotencyKey: `txn_${Date.now()}_${form.receiverPhone}`,
+        receiverIdentifier: identifier.trim(),
+        amount: amt,
+        idempotencyKey,
+        description: description.trim() || undefined,
       });
-      setSuccess({ amount: form.amount, receiverPhone: form.receiverPhone });
-      addNotification({ title: 'Transfer Successful', message: `₹${form.amount} sent to ${form.receiverPhone}`, type: 'success' });
-      toast.success(`Transfer of ${fmt(form.amount)} successful!`);
-      setScratchAmount(Number(form.amount));
-      setForm({ receiverPhone: '', amount: '', description: '' });
-      setTimeout(() => setScratchModal(true), 600);
+      onReceiverFound({ ...receiver, _amount: amt } as ReceiverSuggestion & { _amount: number });
     } catch (err) {
-      if (isReceiverNotFound(err)) {
-        toast.error('No account found for that phone number. Ask the recipient to sign up first.');
-      } else if (isWalletNotFound(err)) {
-        const kycRes = await userApi.kycStatus().catch(() => null);
-        setKycStatus(kycRes?.data?.data?.status ?? null);
-        setWalletMissing(true);
-      } else {
-        toast.error(getApiErrorMessage(err, 'Transfer failed'));
-      }
-    } finally { setLoading(false); }
+      toast.error(getApiErrorMessage(err, 'Transfer failed. Please try again.'));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const canSend = receiver && parseFloat(amount) >= 1 && !sending;
+
+  return (
+    <div className="space-y-6">
+      {/* Identifier Input */}
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-[var(--text-muted)]">
+          Send to (phone, email, or user ID)
+        </label>
+        <div className="relative">
+          <input
+            ref={inputRef}
+            type="text"
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
+            placeholder="e.g. 9876543210, user@email.com, or #12345"
+            className="w-full pl-11 pr-10 py-3.5 rounded-2xl border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all text-sm"
+          />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
+          {loading && (
+            <Loader2 className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-500 animate-spin" />
+          )}
+          {receiver && !loading && (
+            <CheckCircle className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500" />
+          )}
+          {error && !loading && identifier.length >= 3 && (
+            <XCircle className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-red-500" />
+          )}
+        </div>
+
+        {/* Status messages */}
+        {identifier.trim().length > 0 && identifier.trim().length < 3 && (
+          <p className="text-xs text-[var(--text-muted)] flex items-center gap-1.5">
+            <AlertCircle className="w-3.5 h-3.5" /> Enter at least 3 characters to search
+          </p>
+        )}
+        {error && !loading && identifier.trim().length >= 3 && (
+          <p className="text-xs text-red-500 flex items-center gap-1.5">
+            <XCircle className="w-3.5 h-3.5" /> {error}
+          </p>
+        )}
+      </div>
+
+      {/* Receiver Card — shown only when found */}
+      {receiver && (
+        <div className="space-y-5 animate-fade-in">
+          <div>
+            <p className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-2">
+              Sending to
+            </p>
+            <ReceiverCard receiver={receiver} />
+          </div>
+
+          {/* Amount */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-[var(--text-muted)]">Amount</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 font-semibold text-[var(--text-muted)]">₹</span>
+              <input
+                type="number"
+                min="1"
+                max="25000"
+                step="0.01"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0.00"
+                className="w-full pl-8 pr-4 py-3.5 rounded-2xl border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all text-lg font-semibold"
+              />
+            </div>
+            <p className="text-xs text-[var(--text-muted)]">Min ₹1 · Max ₹25,000 per transfer</p>
+          </div>
+
+          {/* Description */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-[var(--text-muted)]">
+              Note <span className="text-[var(--text-muted)] font-normal">(optional)</span>
+            </label>
+            <input
+              type="text"
+              maxLength={255}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="e.g. Dinner split, rent..."
+              className="w-full px-4 py-3.5 rounded-2xl border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all text-sm"
+            />
+          </div>
+
+          {/* Send Button */}
+          <button
+            onClick={handleSend}
+            disabled={!canSend}
+            className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-gradient-to-r from-cyan-500 to-cyan-600 text-white font-semibold text-base transition-all hover:from-cyan-600 hover:to-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-cyan-500/20"
+          >
+            {sending ? (
+              <><Loader2 className="w-5 h-5 animate-spin" /> Processing…</>
+            ) : (
+              <><Send className="w-5 h-5" /> Send {amount ? fmt(parseFloat(amount) || 0) : 'Money'}</>
+            )}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Step 3: Success ──────────────────────────────────────────────────────────
+interface SuccessStepProps {
+  receiver: ReceiverSuggestion & { _amount?: number };
+  onDone: () => void;
+}
+
+function SuccessStep({ receiver, onDone }: SuccessStepProps) {
+  const navigate = useNavigate();
+  return (
+    <div className="flex flex-col items-center gap-5 py-8 text-center animate-fade-in">
+      <div className="w-20 h-20 rounded-full bg-emerald-500/10 flex items-center justify-center">
+        <CheckCircle className="w-12 h-12 text-emerald-500" />
+      </div>
+      <div>
+        <h2 className="text-2xl font-bold text-[var(--text-primary)]">Transfer Successful!</h2>
+        <p className="text-[var(--text-muted)] mt-1">
+          {receiver._amount ? fmt(receiver._amount) : 'Money'} sent to{' '}
+          <span className="font-semibold text-[var(--text-primary)]">{receiver.name}</span>
+        </p>
+      </div>
+      <div className="w-full space-y-3 mt-2">
+        <button
+          onClick={onDone}
+          className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-cyan-600 text-white font-semibold transition-all hover:from-cyan-600 hover:to-cyan-700"
+        >
+          Send Another
+        </button>
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="w-full py-3.5 rounded-2xl border border-[var(--border)] text-[var(--text-primary)] font-medium transition-all hover:bg-[var(--bg-card)]"
+        >
+          Back to Dashboard
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Transfer Page ───────────────────────────────────────────────────────
+export default function TransferPage() {
+  const navigate = useNavigate();
+  const [step, setStep]         = useState<Step>('lookup');
+  const [receiver, setReceiver] = useState<(ReceiverSuggestion & { _amount?: number }) | null>(null);
+
+  const handleReceiverFound = useCallback(
+    (r: ReceiverSuggestion & { _amount?: number }) => {
+      setReceiver(r);
+      setStep('success');
+    },
+    [],
+  );
+
+  const handleReset = () => {
+    setReceiver(null);
+    setStep('lookup');
   };
 
   return (
     <div className="max-w-lg mx-auto space-y-6 animate-fade-in">
-      <h1 className="text-2xl font-bold">Send / Transfer</h1>
-
-      {walletMissing && <NoWalletBanner kycStatus={kycStatus} variant="inline" />}
-
-      {success && (
-        <div className="card p-5 border-emerald-500/50 bg-emerald-50 dark:bg-emerald-950/30">
-          <div className="flex items-center gap-3">
-            <CheckCircle className="w-8 h-8 text-emerald-500 shrink-0" />
-            <div>
-              <div className="font-bold text-emerald-700 dark:text-emerald-400">Transfer Successful!</div>
-              <div className="text-sm text-emerald-600 dark:text-emerald-500">
-                {fmt(success.amount)} sent to {success.receiverPhone}
-              </div>
-            </div>
-          </div>
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => navigate(-1)}
+          className="p-2 rounded-xl hover:bg-[var(--bg-card)] transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5 text-[var(--text-muted)]" />
+        </button>
+        <div>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">Send Money</h1>
+          <p className="text-sm text-[var(--text-muted)]">Transfer instantly to any wallet</p>
         </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="card p-6 space-y-5">
-        <InputField
-          label="Recipient Phone Number *"
-          name="receiverPhone"
-          type="tel"
-          placeholder="Enter recipient's phone number"
-          icon={Phone}
-          value={form.receiverPhone}
-          onChange={set}
-          error={errors.receiverPhone ? { message: errors.receiverPhone } : undefined}
-          hint="Enter the recipient's registered phone number"
-        />
-
-        <AmountInput
-          label="Amount *"
-          name="amount"
-          min="1"
-          max="25000"
-          placeholder="0.00"
-          value={form.amount}
-          onChange={set}
-          error={errors.amount ? { message: errors.amount } : undefined}
-          hint="Max: ₹25,000 per transfer"
-          className="text-2xl font-mono"
-        />
-
-        <InputField
-          label="Note (optional)"
-          name="description"
-          type="text"
-          maxLength={255}
-          placeholder="What's this for?"
-          value={form.description}
-          onChange={set}
-        />
-
-        {form.amount && Number(form.amount) > 0 && (
-          <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl text-sm space-y-2">
-            <div className="flex justify-between">
-              <span className="text-[var(--text-muted)]">Transfer amount</span>
-              <span className="font-semibold amount">{fmt(form.amount)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-[var(--text-muted)]">Processing fee</span>
-              <span className="font-semibold text-emerald-500">Free</span>
-            </div>
-            <div className="border-t border-[var(--border)] pt-2 flex justify-between font-bold">
-              <span>Total deducted</span>
-              <span className="amount">{fmt(form.amount)}</span>
-            </div>
-          </div>
-        )}
-
-        <Button type="submit" fullWidth loading={loading} icon={<Send className="w-4 h-4" />}>
-          Send Money
-        </Button>
-      </form>
-
-      <div className="card p-4">
-        <h3 className="font-semibold text-sm mb-3">Transfer Guidelines</h3>
-        <ul className="space-y-1.5 text-xs text-[var(--text-muted)]">
-          <li>• Transfers are instant and irreversible</li>
-          <li>• Maximum ₹25,000 per transaction</li>
-          <li>• Recipient must have a registered PayVault account</li>
-          <li>• Both sender and receiver are notified</li>
-        </ul>
       </div>
 
-      <ScratchCardModal
-        open={scratchModal}
-        onClose={() => setScratchModal(false)}
-        triggerType="transfer"
-        amount={scratchAmount}
-        onPointsEarned={(pts) => {
-          toast.success(`+${pts} bonus points added to your rewards!`, 'Scratch Reward');
-          addNotification({ title: '🎁 Scratch Card Reward', message: `You earned ${pts} bonus points!`, type: 'success' });
-        }}
-      />
+      {/* Card */}
+      <div className="card p-6">
+        {step === 'lookup' && (
+          <LookupStep onReceiverFound={handleReceiverFound} />
+        )}
+        {step === 'success' && receiver && (
+          <SuccessStep receiver={receiver} onDone={handleReset} />
+        )}
+      </div>
+
+      {/* Info strip */}
+      {step === 'lookup' && (
+        <div className="flex items-start gap-3 p-4 rounded-2xl bg-cyan-500/5 border border-cyan-500/20 text-sm text-[var(--text-muted)]">
+          <AlertCircle className="w-4 h-4 text-cyan-500 shrink-0 mt-0.5" />
+          <p>
+            Transfers are instant and cannot be reversed. Always verify the receiver's name
+            before confirming.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

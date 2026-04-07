@@ -11,4 +11,6 @@ export const walletApi = {
     api.get(`/api/wallet/statement/download?from=${from}&to=${to}`, { responseType: 'blob' }),
   createOrder: (amount: number) => api.post(`/api/payment/create-order?amount=${amount}`),
   verifyPayment: (data: object) => api.post('/api/payment/verify', data),
+  receiverSuggestion: (identifier: string) =>
+    api.get(`/api/wallet/transfer/receiver?identifier=${encodeURIComponent(identifier)}`),
 };
