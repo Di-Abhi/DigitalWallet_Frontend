@@ -7,10 +7,7 @@ export interface ApiErrorResponse {
 }
 
 export interface ApiError {
-  response?: {
-    status: number;
-    data?: ApiErrorResponse;
-  };
+  response?: { status: number; data?: ApiErrorResponse; };
   message?: string;
 }
 
@@ -20,11 +17,10 @@ export function getApiErrorMessage(err: unknown, fallback = 'An error occurred')
 }
 
 export function isWalletNotFound(err: unknown): boolean {
-  const e = err as ApiError;
-  const status = e?.response?.status;
+  const e   = err as ApiError;
   const msg = (e?.response?.data?.message || '').toLowerCase();
+  // Only match on message, not 404 status alone — avoids collision with isReceiverNotFound
   return (
-    status === 404 ||
     msg.includes('wallet not found') ||
     msg.includes('wallet does not exist') ||
     msg.includes('no wallet') ||
@@ -34,15 +30,15 @@ export function isWalletNotFound(err: unknown): boolean {
 }
 
 export function isReceiverNotFound(err: unknown): boolean {
-  const e = err as ApiError;
-  const status = e?.response?.status;
+  const e   = err as ApiError;
   const msg = (e?.response?.data?.message || '').toLowerCase();
-
+  // Only match on message — specific to receiver/user not found
   return (
-    status === 404 ||
     msg.includes('user not found') ||
     msg.includes('receiver not found') ||
     msg.includes('phone not registered') ||
-    msg.includes('invalid receiver')
+    msg.includes('invalid receiver') ||
+    msg.includes('no user') ||
+    msg.includes('account not found')
   );
 }

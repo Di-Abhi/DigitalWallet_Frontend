@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { Mail, Phone, User, ArrowRight, CheckCircle } from 'lucide-react';
@@ -18,13 +18,31 @@ interface FormData { fullName: string; email: string; phone: string; password: s
 export function SignupPage() {
   const navigate  = useNavigate();
   const { login } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [showPw, setShowPw]   = useState(false);
-  const [step, setStep]       = useState<1 | 2>(1);
-  const [email, setEmail]     = useState('');
-  const [otp, setOtp]         = useState('');
+  const [loading, setLoading]     = useState(false);
+  const [showPw, setShowPw]       = useState(false);
+  const [step, setStep]           = useState<1 | 2>(1);
+  const [email, setEmail]         = useState('');
+  const [otp, setOtp]             = useState('');
+  const [cooldown, setCooldown]   = useState(0);
+  const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { register, handleSubmit, formState: { errors }, watch } = useForm<FormData>();
   const passwordValue = watch('password', '');
+
+  useEffect(() => () => { if (cooldownRef.current) clearInterval(cooldownRef.current); }, []);
+
+  // Auto-submit OTP when all 6 digits filled
+  useEffect(() => {
+    if (step === 2 && otp.length === 6 && !loading) verifyOtp();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [otp, step]);
+
+  const startCooldown = (secs = 60) => {
+    if (cooldownRef.current) clearInterval(cooldownRef.current);
+    setCooldown(secs);
+    cooldownRef.current = setInterval(() => {
+      setCooldown((p) => { if (p <= 1) { clearInterval(cooldownRef.current!); cooldownRef.current = null; return 0; } return p - 1; });
+    }, 1000);
+  };
 
   const onSubmit = async (data: FormData) => {
     setLoading(true);
@@ -33,6 +51,7 @@ export function SignupPage() {
       setEmail(data.email);
       toast.info('OTP sent to your email');
       setStep(2);
+      startCooldown(60);
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Signup failed');
     } finally { setLoading(false); }
@@ -48,7 +67,21 @@ export function SignupPage() {
       toast.success('Account created! Welcome to PayVault 🎉');
       navigate(ROUTES.DASHBOARD);
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Invalid OTP');
+      toast.error(err.response?.data?.message || 'Invalid or expired OTP');
+      setOtp('');
+    } finally { setLoading(false); }
+  };
+
+  const resendOtp = async () => {
+    if (cooldown > 0 || loading) return;
+    setLoading(true);
+    try {
+      await authApi.sendOtp({ email });
+      setOtp('');
+      startCooldown(60);
+      toast.success('New OTP sent to your email!');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to resend OTP');
     } finally { setLoading(false); }
   };
 
@@ -62,7 +95,7 @@ export function SignupPage() {
               <p className="text-sm font-semibold text-cyan-700 dark:text-cyan-400">Check your inbox</p>
               <p className="text-xs text-cyan-600 dark:text-cyan-500 mt-0.5">
                 Didn't receive it? Check spam or{' '}
-                <button className="underline font-medium" onClick={() => setStep(1)}>go back</button>.
+                <button className="underline font-medium" onClick={() => { setStep(1); setOtp(''); }}>go back</button>.
               </p>
             </div>
           </div>
@@ -70,12 +103,19 @@ export function SignupPage() {
         <div>
           <label className="label text-center block mb-4">Enter OTP</label>
           <OtpInput value={otp} onChange={setOtp} />
+          <p className="text-center text-xs text-[var(--text-muted)] mt-2">Auto-submits when complete</p>
         </div>
         <Button fullWidth size="lg" loading={loading} disabled={otp.length < 6} onClick={verifyOtp}
           icon={<CheckCircle className="w-4 h-4" />} className="shadow-lg shadow-cyan-500/20">
           Verify & Create Account
         </Button>
-        <Button variant="ghost" fullWidth size="sm" onClick={() => setStep(1)}>← Back to signup</Button>
+        <div className="flex items-center justify-between">
+          <Button variant="ghost" size="sm" onClick={() => { setStep(1); setOtp(''); }}>← Back to signup</Button>
+          <button type="button" onClick={resendOtp} disabled={cooldown > 0 || loading}
+            className={`text-xs font-medium transition-colors ${cooldown > 0 || loading ? 'text-[var(--text-muted)] cursor-not-allowed' : 'text-cyan-500 hover:underline'}`}>
+            {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend OTP'}
+          </button>
+        </div>
       </div>
     </AuthShell>
   );

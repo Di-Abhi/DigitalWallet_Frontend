@@ -14,12 +14,9 @@ import { AuthDivider }  from './components/AuthDivider';
 import { PasswordInput } from './components/PasswordInput';
 import { OtpLoginForm }  from './components/OtpLoginForm';
 
-// ─── Login method tabs ────────────────────────────────────────────────────────
 type LoginMode = 'email' | 'phone' | 'otp';
-
 interface PasswordFormData { email: string; phone: string; password: string; }
 
-// ─── Password-based login form (email or phone) ───────────────────────────────
 function PasswordLoginForm({ mode, onSuccess }: { mode: 'email' | 'phone'; onSuccess: (res: any) => void }) {
   const [loading, setLoading] = useState(false);
   const [showPw, setShowPw]   = useState(false);
@@ -55,17 +52,15 @@ function PasswordLoginForm({ mode, onSuccess }: { mode: 'email' | 'phone'; onSuc
           type="tel"
           placeholder="10-digit number"
           error={errors.phone}
-          {...register('phone', VALIDATION.phone)}
+          // Phone login requires exactly 10 digits per backend PhoneLoginRequest schema
+          {...register('phone', VALIDATION.phoneLogin)}
         />
       )}
 
       <div>
         <div className="flex items-center justify-between mb-1.5">
           <label className="label !mb-0">Password</label>
-          <Link
-            to={ROUTES.FORGOT_PASSWORD}
-            className="text-xs text-cyan-500 hover:text-cyan-400 hover:underline font-medium"
-          >
+          <Link to={ROUTES.FORGOT_PASSWORD} className="text-xs text-cyan-500 hover:text-cyan-400 hover:underline font-medium">
             Forgot password?
           </Link>
         </div>
@@ -79,24 +74,18 @@ function PasswordLoginForm({ mode, onSuccess }: { mode: 'email' | 'phone'; onSuc
         />
       </div>
 
-      <Button
-        type="submit"
-        fullWidth
-        size="lg"
-        loading={loading}
+      <Button type="submit" fullWidth size="lg" loading={loading}
         rightIcon={<ArrowRight className="w-4 h-4" />}
-        className="shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/30"
-      >
+        className="shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/30">
         Sign in
       </Button>
     </form>
   );
 }
 
-// ─── LoginPage ────────────────────────────────────────────────────────────────
 export function LoginPage() {
-  const { login }   = useAuth();
-  const navigate    = useNavigate();
+  const { login }       = useAuth();
+  const navigate        = useNavigate();
   const [mode, setMode] = useState<LoginMode>('email');
 
   const handleSuccess = ({ accessToken, refreshToken, user }: any) => {
@@ -106,45 +95,30 @@ export function LoginPage() {
   };
 
   const tabs: { id: LoginMode; label: string; icon: React.ReactNode }[] = [
-    { id: 'email', label: 'Email',    icon: <Mail       className="w-3.5 h-3.5" /> },
-    { id: 'phone', label: 'Phone',    icon: <Phone      className="w-3.5 h-3.5" /> },
+    { id: 'email', label: 'Email',     icon: <Mail       className="w-3.5 h-3.5" /> },
+    { id: 'phone', label: 'Phone',     icon: <Phone      className="w-3.5 h-3.5" /> },
     { id: 'otp',   label: 'Email OTP', icon: <Smartphone className="w-3.5 h-3.5" /> },
   ];
 
   return (
     <AuthShell title="Welcome back" subtitle="Sign in to your PayVault account">
-      {/* Method selector */}
       <TabBar className="mb-6">
         {tabs.map(({ id, label, icon }) => (
-          <TabButton
-            key={id}
-            active={mode === id}
-            onClick={() => setMode(id)}
-            icon={icon}
-          >
+          <TabButton key={id} active={mode === id} onClick={() => setMode(id)} icon={icon}>
             {label}
           </TabButton>
         ))}
       </TabBar>
 
-      {/* Form body — swaps based on selected tab */}
-      {mode === 'otp' ? (
-        <OtpLoginForm onSuccess={handleSuccess} />
-      ) : (
-        <PasswordLoginForm mode={mode} onSuccess={handleSuccess} />
-      )}
+      {mode === 'otp'
+        ? <OtpLoginForm onSuccess={handleSuccess} />
+        : <PasswordLoginForm mode={mode} onSuccess={handleSuccess} />
+      }
 
       <AuthDivider text="Don't have an account?" />
-
-      <LinkButton
-        href={ROUTES.SIGNUP}
-        variant="secondary"
-        fullWidth
-        rightIcon={<ArrowRight className="w-4 h-4" />}
-      >
+      <LinkButton href={ROUTES.SIGNUP} variant="secondary" fullWidth rightIcon={<ArrowRight className="w-4 h-4" />}>
         Create free account
       </LinkButton>
-
       <p className="text-center text-xs text-[var(--text-muted)] mt-6">
         By signing in you agree to our{' '}
         <a href="#" className="text-cyan-500 hover:underline">Terms</a>{' '}and{' '}

@@ -1,103 +1,80 @@
 import { getApiErrorMessage, isReceiverNotFound, isWalletNotFound } from '../../core/api/types';
 import { formatCurrency as fmt } from '../../shared/utils';
 import { useState, ChangeEvent, FormEvent } from 'react';
-import { Send, User, Info, CheckCircle } from 'lucide-react';
+import { Send, Phone, Info, CheckCircle } from 'lucide-react';
 import { userApi } from '../../core/api/userApi';
+import { walletApi } from '../../core/api/walletApi';
 import { toast } from '../../shared/components/Toast';
 import { useNotifications } from '../../store/NotificationContext';
 import NoWalletBanner from '../../shared/components/NoWalletBanner';
 import { ScratchCardModal } from '../../shared/components/ScratchCard';
 import { Button } from '../../shared/components/Button';
 import { InputField, AmountInput } from '../../shared/components/Input';
-import { walletApi } from '../../core/api/walletApi'
 
 type KycStatus = 'NOT_SUBMITTED' | 'PENDING' | 'REJECTED' | 'APPROVED' | null;
 
-interface TransferForm { receiverPhone: string; amount: string; description: string; }
+interface TransferForm   { receiverPhone: string; amount: string; description: string; }
 interface TransferSuccess { amount: string; receiverPhone: string; }
+
+// Phone number validation: 10-15 digits
+const PHONE_RE = /^[0-9]{10,15}$/;
 
 export default function TransferPage() {
   const { addNotification } = useNotifications();
-  const [form, setForm] = useState<TransferForm>({ receiverPhone: '', amount: '', description: '' });
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState<TransferSuccess | null>(null);
+  const [form, setForm]     = useState<TransferForm>({ receiverPhone: '', amount: '', description: '' });
+  const [errors, setErrors] = useState<Partial<TransferForm>>({});
+  const [loading, setLoading]   = useState(false);
+  const [success, setSuccess]   = useState<TransferSuccess | null>(null);
   const [walletMissing, setWalletMissing] = useState(false);
-  const [kycStatus, setKycStatus] = useState<KycStatus>(null);
-  const [scratchModal, setScratchModal] = useState(false);
+  const [kycStatus, setKycStatus]         = useState<KycStatus>(null);
+  const [scratchModal, setScratchModal]   = useState(false);
   const [scratchAmount, setScratchAmount] = useState(0);
 
-  const set = (e: ChangeEvent<HTMLInputElement>) => setForm({ ...form, [e.target.name]: e.target.value });
+  const set = (e: ChangeEvent<HTMLInputElement>) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+    setErrors({ ...errors, [e.target.name]: undefined });
+  };
 
-  const checkKycAndWallet = async () => {
-    try {
-      const res = await userApi.kycStatus();
-      const status = res?.data?.data?.status;
-
-      if (status !== 'APPROVED') {
-        setKycStatus(status);
-        toast.error('Complete KYC to make transfers');
-        return false;
-      }
-
-      return true;
-    } catch {
-      toast.error('Unable to verify KYC status');
-      return false;
-    }
+  const validate = (): boolean => {
+    const newErrors: Partial<TransferForm> = {};
+    if (!form.receiverPhone)               newErrors.receiverPhone = 'Phone number is required';
+    else if (!PHONE_RE.test(form.receiverPhone)) newErrors.receiverPhone = 'Enter a valid 10–15 digit phone number';
+    if (!form.amount)                      newErrors.amount = 'Amount is required';
+    else if (Number(form.amount) < 1)      newErrors.amount = 'Minimum transfer is ₹1';
+    else if (Number(form.amount) > 25000)  newErrors.amount = 'Maximum transfer is ₹25,000';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-
-    if (!form.receiverPhone || !form.amount) {
-      return toast.error('Fill in all required fields');
-    }
-
-    if (Number(form.amount) < 1 || Number(form.amount) > 25000) {
-      return toast.error('Amount must be ₹1–₹25,000');
-    }
-    const isKycValid = await checkKycAndWallet();
-    if (!isKycValid) return;
+    if (!validate()) return;
 
     setLoading(true);
-
     try {
       await walletApi.transfer({
-        receiverPhone: Number(form.receiverPhone),
+        receiverPhone: form.receiverPhone,
         amount: Number(form.amount),
         description: form.description,
         idempotencyKey: `txn_${Date.now()}_${form.receiverPhone}`,
       });
       setSuccess({ amount: form.amount, receiverPhone: form.receiverPhone });
-      addNotification({
-        title: 'Transfer Successful',
-        message: `₹${form.amount} sent to User #${form.receiverPhone}`,
-        type: 'success'
-      });
+      addNotification({ title: 'Transfer Successful', message: `₹${form.amount} sent to ${form.receiverPhone}`, type: 'success' });
       toast.success(`Transfer of ${fmt(form.amount)} successful!`);
-
       setScratchAmount(Number(form.amount));
       setForm({ receiverPhone: '', amount: '', description: '' });
-
       setTimeout(() => setScratchModal(true), 600);
-
     } catch (err) {
-
       if (isReceiverNotFound(err)) {
-        toast.error('Receiver not registered on platform');
-      }
-      else if (isWalletNotFound(err)) {
+        toast.error('No account found for that phone number. Ask the recipient to sign up first.');
+      } else if (isWalletNotFound(err)) {
         const kycRes = await userApi.kycStatus().catch(() => null);
         setKycStatus(kycRes?.data?.data?.status ?? null);
         setWalletMissing(true);
-      }
-      else {
+      } else {
         toast.error(getApiErrorMessage(err, 'Transfer failed'));
       }
-
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   return (
@@ -113,7 +90,7 @@ export default function TransferPage() {
             <div>
               <div className="font-bold text-emerald-700 dark:text-emerald-400">Transfer Successful!</div>
               <div className="text-sm text-emerald-600 dark:text-emerald-500">
-                {fmt(success.amount)} sent to User #{success.receiverPhone}
+                {fmt(success.amount)} sent to {success.receiverPhone}
               </div>
             </div>
           </div>
@@ -124,13 +101,13 @@ export default function TransferPage() {
         <InputField
           label="Recipient Phone Number *"
           name="receiverPhone"
-          type="string"
+          type="tel"
           placeholder="Enter recipient's phone number"
-          icon={User}
+          icon={Phone}
           value={form.receiverPhone}
           onChange={set}
-          required
-          hint="Ask the recipient for their Phone number"
+          error={errors.receiverPhone ? { message: errors.receiverPhone } : undefined}
+          hint="Enter the recipient's registered phone number"
         />
 
         <AmountInput
@@ -141,7 +118,7 @@ export default function TransferPage() {
           placeholder="0.00"
           value={form.amount}
           onChange={set}
-          required
+          error={errors.amount ? { message: errors.amount } : undefined}
           hint="Max: ₹25,000 per transfer"
           className="text-2xl font-mono"
         />
@@ -183,7 +160,7 @@ export default function TransferPage() {
         <ul className="space-y-1.5 text-xs text-[var(--text-muted)]">
           <li>• Transfers are instant and irreversible</li>
           <li>• Maximum ₹25,000 per transaction</li>
-          <li>• Duplicate protection via idempotency key</li>
+          <li>• Recipient must have a registered PayVault account</li>
           <li>• Both sender and receiver are notified</li>
         </ul>
       </div>
