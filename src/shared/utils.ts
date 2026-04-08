@@ -59,8 +59,8 @@ export const VALIDATION = {
   phone: {
     required: 'Phone is required',
     pattern: {
-      value: /^[0-9]{10,15}$/,
-      message: 'Enter a valid 10–15 digit phone number',
+      value: /^[0-9]{10}$/,
+      message: 'Enter a valid 10 digit phone number',
     },
   },
 
@@ -69,7 +69,7 @@ export const VALIDATION = {
     required: 'Phone is required',
     pattern: {
       value: /^[0-9]{10}$/,
-      message: 'Enter a valid 10-digit phone number',
+      message: 'Enter a valid 10 digit phone number',
     },
   },
 
