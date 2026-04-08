@@ -84,10 +84,14 @@ export const VALIDATION = {
   },
 
   fullName: {
-    required: 'Name is required',
-    minLength: { value: 2, message: 'Min 2 characters' },
-    maxLength: { value: 100, message: 'Max 100 characters' },
+  required: 'Name is required',
+  minLength: { value: 2, message: 'Min 2 characters' },
+  maxLength: { value: 100, message: 'Max 100 characters' },
+  pattern: {
+    value: /^[A-Za-z]+(?: [A-Za-z]+)*$/,
+    message: 'Enter a valid name',
   },
+},
 } as const;
 
 // ─── Class Utility ────────────────────────────────────────────────────────────
