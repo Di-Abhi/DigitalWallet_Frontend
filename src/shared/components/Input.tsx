@@ -35,8 +35,13 @@ export const InputField = memo(function InputField({ label, icon: Icon, error, r
         {Icon && <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)] pointer-events-none" aria-hidden="true" />}
         <input
           id={inputId}
-          className={cls('input-field', Icon && 'pl-10', rightElement && 'pr-12', error && 'border-red-500 focus:ring-red-500/50', className)}
-          {...props}
+          className={cls(
+  'input-field',
+  !!Icon && 'pl-10',
+  !!rightElement && 'pr-12',
+  !!error && 'border-red-500 focus:ring-red-500/50',
+  className || undefined
+)}
         />
         {rightElement && <div className="absolute right-3 top-1/2 -translate-y-1/2">{rightElement}</div>}
       </div>
